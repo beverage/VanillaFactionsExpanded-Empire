@@ -490,7 +490,15 @@ namespace VFEEmpire
 				ToTopOfDance();
 			}
 			InterruptDancers();
-            if (Rand.Bool)
+            if (music == null)
+            {
+				//music is not scribed while danceStarted is, so a save and load
+				//during the dance arrives here with nothing playing. Start a
+				//track rather than dereferencing it.
+				music = tracks.RandomElement().TrySpawnSustainer(SoundInfo.InMap(target.ToTargetInfo(Map)));
+				music?.Maintain();
+            }
+            else if (Rand.Bool)
             {
 				var newTrack = tracks.Except(music.def).RandomElement();
 				music.End();
