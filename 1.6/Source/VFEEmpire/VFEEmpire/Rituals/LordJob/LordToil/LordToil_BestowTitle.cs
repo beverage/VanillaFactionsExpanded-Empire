@@ -23,8 +23,8 @@ public class LordToil_BestowTitle : LordToil_Ritual
         //Setting title now so they can claim a throne
         var behavior = ritual.Ritual.behavior as RitualBehaviorWorker_BestowTitle;
         pawn.royalty.SetTitle(Find.FactionManager.OfEmpire, behavior.defToBestow, false);
-        var pawnThrone = RoyalTitleUtility.FindBestUsableThrone(pawn);
-        if (pawnThrone != null && pawnThrone.GetRoom() == ritual.selectedTarget.Cell.GetRoom(ritual.Map))
+        var pawnThrone = FindThroneInRitualRoom(pawn);
+        if (pawnThrone != null)
         {
             Data.spectateRect = CellRect.CenteredOn(pawnThrone.InteractionCell, 0);
             var rotation = pawnThrone.Rotation;
@@ -33,6 +33,41 @@ public class LordToil_BestowTitle : LordToil_Ritual
             Data.spectateRectPreferredSide = rotation.AsSpectateSide;
             pawn.ownership.ClaimThrone(pawnThrone);
         }
+    }
+
+    //Was RoyalTitleUtility.FindBestUsableThrone, which for a pawn with no throne falls
+    //through to FindBestUnassignedThrone, and that scans ThingsOfDef(ThingDefOf.Throne).
+    //GrandThrone and VFEE_StellicThrone are Building_Throne but different defs, so a
+    //throne room built from either returned null and skipped the whole block above:
+    //no spectateRect, no throne claimed, and stage 2 collapsing straight away.
+    //RitualOutcomeComp_ThroneForRole already looks for this throne by class and pays
+    //ritual quality for finding it, so the two now agree. Same checks the vanilla
+    //helper makes, only by class and scoped to the room the ceremony is held in.
+    private Building_Throne FindThroneInRitualRoom(Pawn pawn)
+    {
+        var room = ritual.selectedTarget.Cell.GetRoom(ritual.Map);
+        if (room == null) return null;
+        var assigned = pawn.ownership.AssignedThrone;
+        if (assigned != null) return assigned.GetRoom() == room ? assigned : null;
+        var things = room.ContainedAndAdjacentThings;
+        Building_Throne best = null;
+        var bestDistance = float.MaxValue;
+        for (var i = 0; i < things.Count; i++)
+        {
+            if (things[i] is not Building_Throne throne || !throne.Spawned) continue;
+            if (throne.AssignedPawn != null) continue;
+            var comp = throne.CompAssignableToPawn;
+            if (comp == null || !comp.HasFreeSlot) continue;
+            if (throne.IsForbidden(pawn)) continue;
+            if (RoomRoleWorker_ThroneRoom.Validate(throne.GetRoom()) != null) continue;
+            if (!pawn.CanReserveAndReach(throne, PathEndMode.InteractionCell, pawn.NormalMaxDanger())) continue;
+            var distance = throne.Position.DistanceToSquared(pawn.Position);
+            if (distance >= bestDistance) continue;
+            bestDistance = distance;
+            best = throne;
+        }
+
+        return best;
     }
 
     //Easier to hack this up then try to do this properly with the stages
