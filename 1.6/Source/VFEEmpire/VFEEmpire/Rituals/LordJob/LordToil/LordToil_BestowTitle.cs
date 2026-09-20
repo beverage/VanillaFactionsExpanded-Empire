@@ -84,7 +84,18 @@ public class LordToil_BestowTitle : LordToil_Ritual
             else if (pawn == ritual.PawnWithRole("recipient"))
             {
                 var duty = stage.GetDuty(pawn, null, ritual);
-                pawn.mindState.duty = new PawnDuty(duty, pawn.ownership.AssignedThrone);
+                //The focus has to be a CELL, as it is for the organizer above. VFEE_AcceptTitle
+                //opens with JobGiver_GotoTravelDestination and exactCell, whose arrival test is
+                //pawn.Position == duty.focus; LocalTargetInfo compares thingInt first, so a cell
+                //can never equal a Thing target even standing on it. The recipient then re-issued
+                //a zero-length Goto every tick, which Pawn_JobTracker error-recovered as
+                //"started 10 jobs in one tick", and JobGiver_AcceptTitle below it in the think
+                //tree never got a turn, so she never gave the acceptance speech.
+                //InteractionCell rather than Position because that is where
+                //JobGiver_AcceptTitle.TryFindSpot puts her and what spectateRect is centered on.
+                var recipientThrone = pawn.ownership.AssignedThrone;
+                pawn.mindState.duty = new PawnDuty(duty,
+                    recipientThrone != null ? recipientThrone.InteractionCell : IntVec3.Invalid);
             }
             else
             {
