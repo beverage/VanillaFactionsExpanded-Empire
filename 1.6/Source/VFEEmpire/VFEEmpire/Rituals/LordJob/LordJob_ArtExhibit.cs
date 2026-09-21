@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using RimWorld;
 using UnityEngine;
@@ -34,7 +34,14 @@ public class LordJob_ArtExhibit : LordJob_Ritual
 
     //Exposed
     public Pawn leadNoble;
-    public List<Pawn> nobles;
+    //Initialized like its three siblings below. Notify_PawnLost calls
+    //nobles.Remove(p) behind `ticksPassed < duration`, which is wide open before
+    //the ceremony starts, and nothing fills this list until
+    //LordToil_ArtExhibit_Show.UpdateAllDuties runs for the first time. Any pawn
+    //lost during wait_ForSpawned, moveToPlace or wait_StartBall therefore threw,
+    //and because Lord.Notify_PawnLost catches and logs it, the throw also skipped
+    //the colonistParticipants.Remove(p) on the following line.
+    public List<Pawn> nobles = new();
 
     public RitualOutcomeEffectWorker_ArtExhibit outcome;
     public List<Pawn> presenters = new();
@@ -109,6 +116,12 @@ public class LordJob_ArtExhibit : LordJob_Ritual
         Scribe_Collections.Look(ref artPieces, "artPieces", LookMode.Reference);
         Scribe_Collections.Look(ref presenters, "presenters", LookMode.Reference);
         Scribe_Collections.Look(ref colonistParticipants, "colonistParticipants", LookMode.Reference);
+
+        //The field initializer alone does not survive a load. Scribe_Collections.Look
+        //assigns null whenever the node is absent or carries IsNull, and it is absent
+        //for every save written before the ceremony started, which is exactly the
+        //window Notify_PawnLost is unguarded in. Restore the invariant here.
+        if (nobles == null) nobles = new();
     }
 
     public CellRect ArtSpectateRect(Thing artPiece)
