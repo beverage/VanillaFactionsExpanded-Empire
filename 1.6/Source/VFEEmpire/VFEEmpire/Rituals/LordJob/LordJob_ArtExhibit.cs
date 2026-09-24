@@ -235,6 +235,33 @@ public class LordJob_ArtExhibit : LordJob_Ritual
         transition_DurationTimeOut.AddPostAction(new TransitionAction_Custom(() =>
             QuestUtility.SendQuestTargetSignals(lord.questTags, SignalCeremonyTimeout, lord.Named("SUBJECT"))));
         graph.transitions.Add(transition_DurationTimeOut);
+
+        //transition_Arrived above is the only way forward out of moveToPlace and it
+        //tests leadNoble.Position == Spot. leadNoble is set once and never re-picked,
+        //and a pawn that has left the map keeps a stale Position, so that test answers
+        //false forever. The remaining exits all want hostility, harm or the quest
+        //ending, none of which a peaceful exhibit produces, so the party sits there
+        //with the gallery reserved and the Begin option never offered. Observed in
+        //play: the lead noble walked off the map and the exhibit could not be started
+        //or abandoned.
+        var transition_LeadLost = new Transition(moveToPlace, exitToil);
+        transition_LeadLost.AddPreAction(removeColonists);
+        transition_LeadLost.AddTrigger(new Trigger_TickCondition(() => leadNoble == null || !leadNoble.Spawned, 60));
+        transition_LeadLost.AddPostAction(new TransitionAction_Custom(() =>
+            QuestUtility.SendQuestTargetSignals(lord.questTags, SignalCeremonyFailed, lord.Named("SUBJECT"))));
+        graph.transitions.Add(transition_LeadLost);
+
+        //And a backstop for a lead who is still here but never arrives, which the
+        //check above cannot see. Its own transition rather than another source on
+        //transition_DurationTimeOut, because Trigger_TicksPassed only resets when the
+        //previous toil was not also a source, so sharing one would quietly spend the
+        //walk out of the player's hour to press Begin.
+        var transition_MoveTimeOut = new Transition(moveToPlace, exitToil);
+        transition_MoveTimeOut.AddPreAction(removeColonists);
+        transition_MoveTimeOut.AddTrigger(new Trigger_TicksPassed(60000));
+        transition_MoveTimeOut.AddPostAction(new TransitionAction_Custom(() =>
+            QuestUtility.SendQuestTargetSignals(lord.questTags, SignalCeremonyTimeout, lord.Named("SUBJECT"))));
+        graph.transitions.Add(transition_MoveTimeOut);
         var transition_Hurt = new Transition(moveToPlace, exitToil);
         transition_Hurt.AddPreAction(removeColonists);
         transition_Hurt.AddSource(wait_StartBall);
