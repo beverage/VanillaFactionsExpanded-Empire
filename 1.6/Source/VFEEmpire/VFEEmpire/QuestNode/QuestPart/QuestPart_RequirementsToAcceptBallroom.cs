@@ -28,7 +28,7 @@ namespace VFEEmpire
         private List<Pawn> CantAccept(out string unmet)
         {
             culprits.Clear();
-            StringBuilder sb = new();
+            List<string> unmetLabels = new();
             foreach (var pawn in pawns)
             {
                 var title = pawn.royalty.AllTitlesInEffectForReading.FirstOrDefault(x => x.def.Ext() != null && !x.def.Ext().ballroomRequirements.NullOrEmpty());
@@ -46,10 +46,10 @@ namespace VFEEmpire
                         {
                             if (!req.Met(ballroom, pawn))
                             {
-                                sb.AppendLine(req.LabelCap());
+                                unmetLabels.Add(req.LabelCap());
                             }
                         }
-                        if (sb.Length == 0)
+                        if (unmetLabels.Count == 0)
                         {
                             missingCells = 0;
                             culprits.Remove(pawn);
@@ -58,7 +58,7 @@ namespace VFEEmpire
                     }
                 }
             }
-            unmet = sb.ToString();
+            unmet = unmetLabels.Distinct().ToLineList("- ");
             return culprits;
         }
 
