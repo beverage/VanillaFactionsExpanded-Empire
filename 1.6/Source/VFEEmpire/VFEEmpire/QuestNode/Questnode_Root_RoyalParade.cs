@@ -60,8 +60,7 @@ public class QuestNode_Root_RoyalParade : QuestNode
         slate.Set("stellarch", stellarch);
         slate.Set("emperor", emperor);
         slate.Set("faction", empire);
-        //int prepareTicks = 60000 * 5;
-        var prepareTicks = 25; //test remove
+        var prepareTicks = 60000 * 5;
         slate.Set("prepareTicks", prepareTicks);
         var shuttle = QuestGen_Shuttle.GenerateShuttle(empire, nobles);
         QuestUtility.AddQuestTag(ref shuttle.questTags, questTag);
@@ -81,25 +80,51 @@ public class QuestNode_Root_RoyalParade : QuestNode
         questPart_DisableBreaks.pawns = nobles;
         questPart_DisableBreaks.inSignalEnable = QuestGen.slate.Get<string>("inSignal");
         quest.AddPart(questPart_DisableBreaks);
-        //nobles arrive after 5 days
-        /*        quest.Delay(prepareTicks, () =>
-                {*/
+        //nobles arrive after 5 days, counted down in the quest tab and as an alert. They never
+        //land while the Empire is hostile to the colony, and they wait up to a day for the stellarch
+        //to be there to receive them and for any threat there to pass. Otherwise the parade is called off.
+        var noblesArrive = QuestGen.GenerateNewSignal("NoblesArrive");
+        var empireHostile = QuestGen.GenerateNewSignal("EmpireHostileAtArrival");
+        var stellarchAway = QuestGen.GenerateNewSignal("StellarchAwayAtArrival");
+        var colonyThreatened = QuestGen.GenerateNewSignal("ColonyThreatenedAtArrival");
+        var awaitLanding = new QuestPart_AwaitParadeLanding
+        {
+            stellarch = stellarch,
+            mapParent = map.Parent,
+            outSignalHostile = empireHostile,
+            outSignalStellarchAway = stellarchAway,
+            outSignalThreatened = colonyThreatened
+        };
+        awaitLanding.outSignalsCompleted.Add(noblesArrive);
+        var countdown = quest.Delay(prepareTicks, () =>
+        {
+            awaitLanding.inSignalEnable = QuestGen.slate.Get<string>("inSignal");
+            quest.AddPart(awaitLanding);
+        }, expiryInfoPart: "VFEE.Parade.NoblesArriveIn".Translate(), expiryInfoPartTip: "VFEE.Parade.NoblesArriveOn".Translate());
+        countdown.alertLabel = "VFEE.Parade.NoblesArriveIn".Translate();
+        countdown.alertExplanation = "VFEE.Parade.NoblesArriveInDesc".Translate();
+        countdown.alertCulprits.Add(stellarch);
+        countdown.ticksLeftAlertCritical = 60000;
+        FailResults(quest, empireHostile, "[CountdownHostileLetterLabel]", "[CountdownHostileLetterText]", nobles);
+        FailResults(quest, stellarchAway, "[CountdownAwayLetterLabel]", "[CountdownAwayLetterText]", nobles);
+        FailResults(quest, colonyThreatened, "[CountdownThreatLetterLabel]", "[CountdownThreatLetterText]", nobles);
         //shuttle
         var lodgers = new List<Pawn>();
         lodgers.AddRange(nobles);
         slate.Set("lodgers", lodgers);
         shuttle.TryGetComp<CompShuttle>().requiredPawns = lodgers;
-        var transport = quest.GenerateTransportShip(TransportShipDefOf.Ship_Shuttle, lodgers, shuttle).transportShip;
-        quest.AddShipJob_Arrive(transport, map.Parent, factionForArrival: Faction.OfEmpire, startMode: ShipJobStartMode.Instant);
-        quest.AddShipJob_Unload(transport);
-        quest.AddShipJob_WaitForever(transport, true, true, nobles.Cast<Thing>().ToList());
+        var transport = quest.GenerateTransportShip(TransportShipDefOf.Ship_Shuttle, lodgers, shuttle, noblesArrive).transportShip;
+        awaitLanding.transportShip = transport;
+        quest.AddShipJob_Arrive(transport, map.Parent, factionForArrival: Faction.OfEmpire, startMode: ShipJobStartMode.Instant, inSignal: noblesArrive);
+        quest.AddShipJob_Unload(transport, inSignal: noblesArrive);
+        quest.AddShipJob_WaitForever(transport, true, true, nobles.Cast<Thing>().ToList(), noblesArrive);
         QuestUtility.AddQuestTag(ref transport.questTags, questTag);
         //lord
         var questPart_Parade = new QuestPart_Parade
         {
             stellarch = stellarch,
             leadPawn = bestNoble,
-            inSignal = QuestGen.slate.Get<string>("inSignal"),
+            inSignal = noblesArrive,
             pawns = lodgers,
             questTag = questTag,
             raidTag = raidSignal,
@@ -109,7 +134,8 @@ public class QuestNode_Root_RoyalParade : QuestNode
             faction = empire
         };
         quest.AddPart(questPart_Parade);
-/*        });*/
+        quest.Letter(LetterDefOf.NeutralEvent, noblesArrive, lookTargets: Gen.YieldSingle(shuttle), label: "[NoblesArriveLetterLabel]",
+            text: "[NoblesArriveLetterText]");
 
         //reward
         var questPart_Choice = new QuestPart_Choice();
