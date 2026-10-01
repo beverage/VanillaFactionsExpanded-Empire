@@ -92,7 +92,10 @@ public class LordToil_Parade_Wait : LordToil_Wait
         foreach (var pawn in pawns)
         {
             if (participants.RoleForPawn(pawn)?.id == "guard")
+            {
                 parade.guards.Add(pawn);
+                parade.assignedGuards.Add(pawn);
+            }
             else
                 parade.nobles.Add(pawn);
             if (pawn.drafter != null) pawn.drafter.Drafted = false;

@@ -25,6 +25,10 @@ public class LordJob_Parade : LordJob_Ritual
     public LordToil exitToil;
     public List<Pawn> guards = new();
 
+    //Everyone given the guard role, never removed. Notify_PawnLost takes a fallen guard out of guards before the trigger
+    //for a violent loss runs, so Trigger_ParadeLostViolently checks this list: a guard's own loss never fails the parade
+    public List<Pawn> assignedGuards = new();
+
 
     //Not Exposed
     public Sustainer music;
@@ -118,6 +122,8 @@ public class LordJob_Parade : LordJob_Ritual
         Scribe_Collections.Look(ref guards, "guards", LookMode.Reference);
         Scribe_Collections.Look(ref colonistParticipants, "colonistParticipants", LookMode.Reference);
         Scribe_Collections.Look(ref stops, "stops", LookMode.Value);
+        Scribe_Collections.Look(ref assignedGuards, "assignedGuards", LookMode.Reference);
+        if (Scribe.mode == LoadSaveMode.PostLoadInit) assignedGuards ??= guards?.ToList() ?? new();
     }
 
     //The spot is fixed when the nobles are sent, from the cell their shuttle is meant to land on, but the shuttle comes down
@@ -197,7 +203,7 @@ public class LordJob_Parade : LordJob_Ritual
         transition_ParadeInterupted.AddTrigger(
             new Trigger_TickCondition(() => { return shuttle.Destroyed || stellarch.InMentalState || stellarch.Downed; }, 60));
         //transition_ParadeInterupted.AddTrigger(new Trigger_PawnHarmed()); taking out pawn harmed as instant fail as can be triggered super easily
-        transition_ParadeInterupted.AddTrigger(new Trigger_PawnLostViolently());
+        transition_ParadeInterupted.AddTrigger(new Trigger_ParadeLostViolently());
         transition_ParadeInterupted.AddTrigger(new Trigger_Signal(questEndedSignal));
         graph.transitions.Add(transition_ParadeInterupted);
 
@@ -273,8 +279,9 @@ public class LordJob_Parade : LordJob_Ritual
         QuestUtility.SendQuestTargetSignals(lord.questTags, signal, lord.Named("SUBJECT"));
         foreach (var pawn in lord.ownedPawns.ListFullCopy())
             pawn.jobs.CheckForJobOverride();
+        //A guard killed in the parade is still listed here, and a dead pawn has no job tracker
         foreach (var pawn in colonistParticipants)
-            pawn.jobs.CheckForJobOverride();
+            pawn.jobs?.CheckForJobOverride();
     }
 
     public override void PostCleanup()

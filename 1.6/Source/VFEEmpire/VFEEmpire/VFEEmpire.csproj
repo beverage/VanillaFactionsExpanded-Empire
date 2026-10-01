@@ -179,6 +179,7 @@
     <Compile Include="Rituals\LordJob\LordToil\LordToil_GrandBall_Dance.cs" />
     <Compile Include="Rituals\LordJob\LordToil\LordToil_ArtExhibit_Wait.cs" />
     <Compile Include="Rituals\LordJob\LordToil\LordToil_GrandBall_Wait.cs" />
+    <Compile Include="Rituals\LordJob\Trigger_ParadeLostViolently.cs" />
     <Compile Include="Rituals\Outcomes\RitualOutcomeEffectWorker_Parade.cs" />
     <Compile Include="Rituals\Outcomes\RitualOutcomeEffectWorker_ArtExhibit.cs" />
     <Compile Include="Rituals\Outcomes\RitualOutcomeEffectWorker_BestowHonor.cs" />
