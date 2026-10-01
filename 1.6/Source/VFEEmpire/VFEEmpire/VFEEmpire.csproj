@@ -112,6 +112,7 @@
     <Compile Include="Comps\HediffComp_MakeThoughtsStackable.cs" />
     <Compile Include="Comps\HediffComp_RemoveOnAdd.cs" />
     <Compile Include="Comps\MapComponent_Terrorism.cs" />
+    <Compile Include="Comps\StorytellerComp_RefiringUntilSuccess.cs" />
     <Compile Include="Comps\StorytellerComp_WealthSteps.cs" />
     <Compile Include="DefOf\HonorDefOf.cs" />
     <Compile Include="HarmonyPatches\ColonistTitleCache.cs" />
