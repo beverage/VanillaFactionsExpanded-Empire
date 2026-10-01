@@ -99,6 +99,13 @@ public class WorldComponent_Hierarchy : WorldComponent
         TitleHolders.SortBy(p => p.royalty.GetCurrentTitleInFaction(empire).def.seniority, p => p.royalty.GetFavor(empire), p => p.Name.ToStringFull);
     }
 
+    //For a titled colonist who leaves for the Empire: the refresh only adds colonists and the pawns it made itself
+    public void AddTitleHolder(Pawn pawn)
+    {
+        if (!TitleHolders.Contains(pawn)) TitleHolders.Add(pawn);
+        RefreshPawns(false);
+    }
+
     private void MakePawnFor(RoyalTitleDef title)
     {
         var empire = Faction.OfEmpire;

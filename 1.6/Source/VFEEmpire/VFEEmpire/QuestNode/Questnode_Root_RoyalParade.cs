@@ -127,6 +127,8 @@ public class QuestNode_Root_RoyalParade : QuestNode
         endGame.endingText = "VFEE.Parade.EndGame.Ending".Translate(stellarch.Named("STELLARCH"), emperor.Named("EMPEROR")).Resolve().StripTags();
         endGame.signalListenMode = QuestPart.SignalListenMode.OngoingOnly;
         quest.AddPart(endGame);
+        //After the credits part, whose countdown holds off the game over check if everyone ascended
+        quest.AddPart(new QuestPart_Ascension { inSignal = pickupSuccess, stellarch = stellarch });
         //raid
         quest.Signal(raidSignal, () =>
         {

@@ -152,6 +152,7 @@
     <Compile Include="QuestNode\Questnode_Root_RoyalParade.cs" />
     <Compile Include="QuestNode\QuestPart\QuestPart_RequirementsToShuttleLandingArea.cs" />
     <Compile Include="QuestNode\QuestPart\QuestPart_StellarchFails.cs" />
+    <Compile Include="QuestNode\QuestPart\QuestPart_Ascension.cs" />
     <Compile Include="QuestNode\QuestPart\QuestPart_Parade.cs" />
     <Compile Include="QuestNode\QuestPart\QuestPart_ArtExhibit.cs" />
     <Compile Include="QuestNode\QuestPart\QuestPart_GrandBall.cs" />
