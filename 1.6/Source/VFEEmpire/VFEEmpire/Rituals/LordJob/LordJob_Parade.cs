@@ -247,7 +247,7 @@ public class LordJob_Parade : LordJob_Ritual
         outcome.Apply(ticksPassed / (float)duration, totalPresenceTmp, this);
         lord.ReceiveMemo("CeremonyFinished");
         QuestUtility.SendQuestTargetSignals(lord.questTags, signal, lord.Named("SUBJECT"));
-        foreach (var pawn in lord.ownedPawns)
+        foreach (var pawn in lord.ownedPawns.ListFullCopy())
             pawn.jobs.CheckForJobOverride();
         foreach (var pawn in colonistParticipants)
             pawn.jobs.CheckForJobOverride();
@@ -281,7 +281,7 @@ public class LordJob_Parade : LordJob_Ritual
                 }
 
                 if (allAtStart)
-                    foreach (var pawn in lord.ownedPawns)
+                    foreach (var pawn in lord.ownedPawns.ListFullCopy())
                         pawn.jobs.CheckForJobOverride();
             }
 
@@ -407,7 +407,7 @@ public class LordJob_Parade : LordJob_Ritual
                 murderer.jobs.CheckForJobOverride();
             }
 
-        foreach (var pawn in guards)
+        foreach (var pawn in guards.ListFullCopy())
             pawn.jobs.CheckForJobOverride();
     }
 
@@ -420,7 +420,7 @@ public class LordJob_Parade : LordJob_Ritual
             return;
         }
 
-        foreach (var p in lord.ownedPawns)
+        foreach (var p in lord.ownedPawns.ListFullCopy())
         {
             p.mindState.duty.focus = Destination;
             p.jobs.CheckForJobOverride();
@@ -433,7 +433,9 @@ public class LordJob_Parade : LordJob_Ritual
         if (nobles.Contains(p) && ticksPassed < duration) nobles.Remove(p);
         if (guards.Contains(p)) guards.Remove(p);
         var compShuttle = shuttle.TryGetComp<CompShuttle>();
-        if (compShuttle.requiredPawns.Contains(p)) compShuttle.requiredPawns.Remove(p);
+        //After the parade the stellarch may leave to be tended, and the shuttle still waits for her
+        if (compShuttle.requiredPawns.Contains(p) && (p != stellarch || condition != PawnLostCondition.LeftVoluntarily))
+            compShuttle.requiredPawns.Remove(p);
         p.jobs?.CheckForJobOverride();
     }
 
@@ -448,7 +450,11 @@ public class LordJob_Parade : LordJob_Ritual
         }
     }
 
-    public override bool ShouldRemovePawn(Pawn p, PawnLostCondition reason) => true;
+    //Vanilla lets a ritual member leave of their own accord when a need or a wound pulls them away. The parade
+    //has nobody to lead it without the stellarch, so she cannot leave it that way while it lasts. Once it is over
+    //she can, to be tended before she boards.
+    public override bool ShouldRemovePawn(Pawn p, PawnLostCondition reason) =>
+        p != stellarch || reason != PawnLostCondition.LeftVoluntarily || paradeFinished;
 
     public override string GetReport(Pawn pawn) => "LordReportAttending".Translate("VFEE.Parade.Label".Translate());
 

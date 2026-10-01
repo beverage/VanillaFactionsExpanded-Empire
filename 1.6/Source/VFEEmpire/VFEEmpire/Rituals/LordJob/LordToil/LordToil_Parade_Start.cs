@@ -54,7 +54,8 @@ namespace VFEEmpire
                 ritual.paradeStarted = true;
                 ritual.nobles = lord.ownedPawns.Where(x => x.royalty?.HasAnyTitleIn(Faction.OfEmpire) ?? false).ToList();
             }
-            foreach (var pawn in lord.ownedPawns)
+            //CheckForJobOverride can take a pawn out of the lord, so this loops over a copy
+            foreach (var pawn in lord.ownedPawns.ListFullCopy())
             {
                 if(pawn == ritual.stellarch)
                 {

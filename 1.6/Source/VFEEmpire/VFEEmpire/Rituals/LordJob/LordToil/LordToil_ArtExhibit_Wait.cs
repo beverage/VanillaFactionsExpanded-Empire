@@ -86,7 +86,8 @@ public class LordToil_ArtExhibit_Wait : LordToil_Wait
     public override void UpdateAllDuties()
     {
         var lordJob = (LordJob_ArtExhibit)lord.LordJob;
-        foreach (var pawn in lord.ownedPawns)
+        //CheckForJobOverride can take a pawn out of the lord, so this loops over a copy
+        foreach (var pawn in lord.ownedPawns.ListFullCopy())
         {
             if (pawn != bestNoble)
             {

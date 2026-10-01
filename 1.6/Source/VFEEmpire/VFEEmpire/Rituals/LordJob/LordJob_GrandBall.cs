@@ -460,7 +460,7 @@ namespace VFEEmpire
 			outcome.ResetCompDatas();
 			lord.ReceiveMemo("CeremonyFinished");
 			QuestUtility.SendQuestTargetSignals(lord.questTags, signal, lord.Named("SUBJECT"));
-			foreach (var pawn in lord.ownedPawns)
+			foreach (var pawn in lord.ownedPawns.ListFullCopy())
 				pawn.jobs.CheckForJobOverride();
 		}
 		public void RemoveTags(string tag)

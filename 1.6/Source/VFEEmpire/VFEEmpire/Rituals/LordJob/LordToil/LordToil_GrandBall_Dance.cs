@@ -54,7 +54,8 @@ namespace VFEEmpire
                 ritual.StartDance();
                 ritual.SetPartners();       
             }
-            foreach (var pawn in lord.ownedPawns)
+            //CheckForJobOverride can take a pawn out of the lord, so this loops over a copy
+            foreach (var pawn in lord.ownedPawns.ListFullCopy())
             {
                 if (ritual.nobles.Contains(pawn))
                 {

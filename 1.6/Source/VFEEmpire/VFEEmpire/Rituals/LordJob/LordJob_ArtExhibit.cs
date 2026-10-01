@@ -301,9 +301,9 @@ public class LordJob_ArtExhibit : LordJob_Ritual
         outcome.ResetCompDatas();
         lord.ReceiveMemo(MemoCeremonyFinished);
         QuestUtility.SendQuestTargetSignals(lord.questTags, signal, lord.Named("SUBJECT"));
-        foreach (var pawn in lord.ownedPawns)
+        foreach (var pawn in lord.ownedPawns.ListFullCopy())
             pawn.jobs.CheckForJobOverride();
-        foreach (var pawn in colonistParticipants)
+        foreach (var pawn in colonistParticipants.ListFullCopy())
             pawn.jobs.CheckForJobOverride();
     }
 
@@ -356,7 +356,7 @@ public class LordJob_ArtExhibit : LordJob_Ritual
             return;
         }
 
-        foreach (var p in lord.ownedPawns)
+        foreach (var p in lord.ownedPawns.ListFullCopy())
             p.jobs.CheckForJobOverride();
     }
 
