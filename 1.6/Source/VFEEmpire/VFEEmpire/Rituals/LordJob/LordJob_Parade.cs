@@ -120,6 +120,29 @@ public class LordJob_Parade : LordJob_Ritual
         Scribe_Collections.Look(ref stops, "stops", LookMode.Value);
     }
 
+    //The spot is fixed when the nobles are sent, from the cell their shuttle is meant to land on, but the shuttle comes down
+    //near that cell rather than on it when something is in the way: a bush or a tree in its footprint is enough for the
+    //skyfaller to set it down a cell over. A cell south covers the spot, which nobody can reach then, and the nobles, given
+    //no job by their duty, walk off the map. Once they are all out, the spot moves to the shuttle's interaction cell where
+    //it really stands, or to where the lead noble was set down when nobody can stand on that cell, which the skyfaller
+    //keeps clear of trees and walls but not of deep water.
+    private void FollowShuttle(LordToil_BestowingCeremony_MoveInPlace moveToPlace)
+    {
+        if (shuttle is not { Spawned: true }) return;
+        var cell = shuttle.InteractionCell;
+        if (!cell.InBounds(Map) || !cell.Standable(Map))
+        {
+            if (visitorLead is not { Spawned: true }) return;
+            cell = visitorLead.Position;
+        }
+        if (cell == Spot) return;
+        var stop = stops.LastIndexOf(Spot);
+        if (stop >= 0) stops[stop] = cell;
+        target = cell;
+        moveToPlace.spot = cell;
+        paradeToil.spot = cell;
+    }
+
     public override StateGraph CreateGraph()
     {
         var graph = new StateGraph();
@@ -142,6 +165,7 @@ public class LordJob_Parade : LordJob_Ritual
 
         var transition_Spawned = new Transition(wait_ForSpawned, moveToPlace);
         transition_Spawned.AddTrigger(new Trigger_Custom(signal => signal.type == TriggerSignalType.Tick && lord.ownedPawns.All(x => x.Spawned)));
+        transition_Spawned.AddPreAction(new TransitionAction_Custom(() => FollowShuttle(moveToPlace)));
         graph.transitions.Add(transition_Spawned);
 
         var transition_Arrived = new Transition(moveToPlace, wait_StartParade);
