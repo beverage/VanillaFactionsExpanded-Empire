@@ -23,6 +23,10 @@ public class QuestPart_Ascension : QuestPart
         var ascended = sent.OfType<Pawn>().Where(p => !p.Dead && p.Faction == Faction.OfPlayer).ToList();
         foreach (var pawn in ascended)
         {
+            //A stellarch with enough honor is offered a high stellarch's bestowing ceremony. Left open, that offer fails out
+            //loud ("You have failed the quest") the moment she takes the title here, so close any offer still waiting to be
+            //accepted for whoever leaves, quietly, as vanilla does when a pawn outgrows one
+            RoyalTitleUtility.EndExistingBestowingCeremonyQuest(pawn, empire);
             pawn.ownership?.UnclaimAll();
             foreach (var map in Find.Maps)
                 foreach (var building in map.listerBuildings.allBuildingsColonist)
