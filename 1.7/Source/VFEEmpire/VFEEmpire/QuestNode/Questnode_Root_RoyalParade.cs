@@ -115,6 +115,14 @@ public class QuestNode_Root_RoyalParade : QuestNode
         //Meanwhile the realm pays its respects: a delegation a day from the friendly factions, with deserters hidden among them
         //unless the storyteller allows no violent quests. The letter opening the countdown warns of them.
         var assassinsCome = Find.Storyteller.difficulty.allowViolentQuests;
+        //How dangerous it is to be, asked as the countdown begins, unless the storyteller allows no violent quests, which
+        //leaves the choice nothing to change
+        if (assassinsCome)
+            quest.AddPart(new QuestPart_AscensionDifficulty
+            {
+                inSignalEnable = QuestGen.slate.Get<string>("inSignal"),
+                stellarch = stellarch
+            });
         quest.AddPart(new QuestPart_Delegations
         {
             inSignalEnable = QuestGen.slate.Get<string>("inSignal"),

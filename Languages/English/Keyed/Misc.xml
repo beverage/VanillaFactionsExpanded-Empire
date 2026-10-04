@@ -134,6 +134,10 @@
 	<VFEE.Conspiracy.TruceBrokenLabel>Truce broken</VFEE.Conspiracy.TruceBrokenLabel>
 	<VFEE.Conspiracy.TruceBroken>{KILLER_nameDef} has killed {VICTIM_nameDef}, and the truce after {STELLARCH}'s death is broken. The other plotters have gone over to the deserters: {CONSPIRATORS}.</VFEE.Conspiracy.TruceBroken>
 	<VFEE.Conspiracy.FightOver>The fighting is over, and the children and slaves who sat it out are coming out of hiding.</VFEE.Conspiracy.FightOver>
+	<VFEE.Ascension.DifficultyTitle>How dangerous an ascension?</VFEE.Ascension.DifficultyTitle>
+	<VFEE.Ascension.Difficulty>{STELLARCH_nameDef}'s ascension is about to be announced across the realm. For five days, delegations will come to pay their respects, and then the nobility will land for the parade. Not everyone who comes will wish {STELLARCH_objective} well, and not every danger will come from outside the colony. Keep {STELLARCH_objective} guarded day and night, from now until {STELLARCH_pronoun} boards the shuttle.\n\nHow dangerous should it be? This cannot be changed later.\n\nNormal: fewer of {STELLARCH_possessive} enemies will dare to strike.\n\nLosing is fun: all of them will.</VFEE.Ascension.Difficulty>
+	<VFEE.Ascension.DifficultyNormal>Normal</VFEE.Ascension.DifficultyNormal>
+	<VFEE.Ascension.DifficultyLosingIsFun>Losing is fun</VFEE.Ascension.DifficultyLosingIsFun>
 	<VFEE.DefuseBomb>Defuse bomb</VFEE.DefuseBomb>
 	<VFEE.AssassinationSuccess>Deserters are leaving as they have eliminated their target.</VFEE.AssassinationSuccess>
 	<VFEE.Discard>Discard</VFEE.Discard>

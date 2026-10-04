@@ -529,13 +529,14 @@ public class LordJob_Parade : LordJob_Ritual
     //Four bombs in the colony's high-value rooms and one by the shuttle, each a different colour of the deserters' bomb:
     //double-clicking a thing selects every thing of the same def on screen, so finding one must not show the rest. The four
     //are drawn from the ten most valuable rooms, so the player knows where to look but not which of them were hit; the
-    //parade's own rooms compete like any other
+    //parade's own rooms compete like any other. The Normal difficulty plants two in the rooms
     private const int RoomBombs = 4;
     private const int BombableRooms = 10;
 
     private void SpawnBomb()
     {
         var deserter = GameComponent_Empire.Instance.Deserter;
+        var roomBombs = QuestPart_AscensionDifficulty.For(stellarch) == AscensionDifficulty.Normal ? QuestPart_AscensionDifficulty.NormalRoomBombs : RoomBombs;
         var kinds = new List<ThingDef>
                 { VFEE_DefOf.VFEE_Bomb, VFEE_DefOf.VFEE_BombRed, VFEE_DefOf.VFEE_BombBlue, VFEE_DefOf.VFEE_BombGreen, VFEE_DefOf.VFEE_BombYellow }
            .InRandomOrder().ToList();
@@ -545,7 +546,7 @@ public class LordJob_Parade : LordJob_Ritual
         //The rest, most valuable first, only for when one of the ten has no free cell
         foreach (var room in ranked.Take(BombableRooms).InRandomOrder().Concat(ranked.Skip(BombableRooms)))
         {
-            if (planted >= RoomBombs) break;
+            if (planted >= roomBombs) break;
             if (room.Cells.Where(BombCell).TryRandomElement(out var cell))
                 PlantBomb(kinds[planted++], deserter, cell, duration - ticksPassed - 100); //Explode just before parade ends
         }

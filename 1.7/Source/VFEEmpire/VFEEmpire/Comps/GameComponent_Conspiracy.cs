@@ -111,16 +111,19 @@ public class GameComponent_Conspiracy : GameComponent
             ? nobles.RandomElementByWeight(pawn => pawn == rival ? RivalWeight : TitledWeight)
             : eligible.RandomElementByWeight(pawn => ModsConfig.IdeologyActive && pawn.Ideo?.GetRole(pawn) != null ? RoleWeight : 1f);
 
-        //As many allies as she has guards: those who dislike her most, then those who like the Brutus most, then the rest,
-        //coolest towards her first
+        //As many allies as she has guards, one at most on the Normal difficulty: those who dislike her most, then those who
+        //like the Brutus most, then the rest, coolest towards her first
         var guards = parade.guards.Where(guard => guard.Spawned && !guard.Dead && !guard.Downed).ToList();
+        var count = QuestPart_AscensionDifficulty.For(stellarch) == AscensionDifficulty.Normal
+            ? System.Math.Min(guards.Count, QuestPart_AscensionDifficulty.NormalAllies)
+            : guards.Count;
         var others = candidates.Where(pawn => pawn != brutus)
            .Select(pawn => (pawn, ofHer: pawn.relations.OpinionOf(stellarch), ofBrutus: pawn.relations.OpinionOf(brutus))).ToList();
         var allies = others.Where(other => other.ofHer < 0).OrderBy(other => other.ofHer)
            .Concat(others.Where(other => other.ofHer >= 0 && other.ofBrutus > 0).OrderByDescending(other => other.ofBrutus))
            .Concat(others.Where(other => other.ofHer >= 0 && other.ofBrutus <= 0).OrderBy(other => other.ofHer))
            .Select(other => other.pawn)
-           .Take(guards.Count)
+           .Take(count)
            .ToList();
 
         plot = new Conspiracy
