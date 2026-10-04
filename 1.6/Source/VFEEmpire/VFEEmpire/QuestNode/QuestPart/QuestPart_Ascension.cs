@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using RimWorld;
+using RimWorld.QuestGen;
 using Verse;
 
 namespace VFEEmpire;
@@ -72,5 +73,31 @@ public class QuestPart_Ascension : QuestPart
         base.ExposeData();
         Scribe_Values.Look(ref inSignal, "inSignal");
         Scribe_References.Look(ref stellarch, "stellarch");
+    }
+
+    //An ascension offer is built and saved as it appears, and it never expires, so one offered before this part existed
+    //would keep the old ending once accepted: the nobles landing at once, and the stellarch dropping out of the hierarchy.
+    //After a load such an offer is swapped for a fresh one, built for whoever holds Stellarch now. The fresh one is built
+    //first, and the old offer stays as it was unless that comes out whole. Swapped, the old offer ends quietly and stays
+    //in the quest history, and the fresh one takes over its letter if that is still up, and its dismissal.
+    public static void ReplaceOldOffers()
+    {
+        var root = VFEE_DefOf.VFEE_Parade;
+        var oldOffers = Find.QuestManager.QuestsListForReading
+           .Where(quest => quest.root == root && quest.State == QuestState.NotYetAccepted && !quest.PartsListForReading.OfType<QuestPart_Ascension>().Any())
+           .ToList();
+        if (oldOffers.Count == 0) return;
+        var points = StorytellerUtility.DefaultThreatPointsNow(Find.World);
+        if (!root.CanRun(points, Find.World)) return;
+        var slate = new Slate();
+        slate.Set("points", points);
+        var fresh = QuestGen.Generate(root, slate);
+        if (!fresh.PartsListForReading.OfType<QuestPart_Ascension>().Any()) return;
+        Find.QuestManager.Add(fresh);
+        fresh.dismissed = oldOffers.All(offer => offer.dismissed);
+        var hadLetter = false;
+        foreach (var offer in oldOffers)
+            hadLetter |= StorytellerComp_RefiringUntilSuccess.EndOffer(offer);
+        if (hadLetter) QuestUtility.SendLetterQuestAvailable(fresh);
     }
 }

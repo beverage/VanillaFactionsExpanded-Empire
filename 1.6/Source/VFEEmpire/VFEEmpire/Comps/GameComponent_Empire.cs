@@ -51,6 +51,7 @@ public class GameComponent_Empire : GameComponent
     {
         base.LoadedGame();
         EmpireUtility.Notify_ColonistsChanged();
+        LongEventHandler.ExecuteWhenFinished(QuestPart_Ascension.ReplaceOldOffers);
     }
 
     public override void ExposeData()
