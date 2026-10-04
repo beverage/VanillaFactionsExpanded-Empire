@@ -250,9 +250,12 @@ public class QuestPart_Delegations : QuestPartActivable
             GenSpawn.Spawn(pawn, CellFinder.RandomClosewalkCellNear(entry, map, 5), map);
         }
         var cell = new List<Pawn>();
+        //Half as many on the Normal difficulty
+        var pointsPerDeserter = PointsPerDeserter
+                              * (QuestPart_AscensionDifficulty.Of(quest) == AscensionDifficulty.Normal ? QuestPart_AscensionDifficulty.NormalPointsPerDeserterFactor : 1f);
         if (delegation.assassin)
             cell.AddRange(pawns.Where(CanJoinCell)
-               .InRandomOrder().Take(Mathf.Clamp(Mathf.RoundToInt(points / PointsPerDeserter), 1, Mathf.Max(1, pawns.Count / 2))));
+               .InRandomOrder().Take(Mathf.Clamp(Mathf.RoundToInt(points / pointsPerDeserter), 1, Mathf.Max(1, pawns.Count / 2))));
         if (!LordToil_DelegationTour.TryFindStop(pawns[0], IntVec3.Invalid, out var firstStop)) firstStop = entry;
         LordMaker.MakeNewLord(faction, new LordJob_Delegation(faction, stellarch, cell, delegation.departureTick, firstStop), map, pawns);
         Find.LetterStack.ReceiveLetter("VFEE.Delegation.ArrivedLabel".Translate(faction.Named("FACTION")),
