@@ -58,6 +58,7 @@ public static class VFEE_DefOf
     public static MentalStateDef VFEE_ConspiratorApproach;
     public static MentalStateDef VFEE_ConspiratorStrike;
     public static MentalStateDef VFEE_SittingOutFight;
+    public static JobDef VFEE_ConspiratorCloseIn;
     public static TraitDef VFEE_Conspirator;
     public static TraitDef VFEE_Bystander;
     public static ThoughtDef VFEE_StellarchTruce;

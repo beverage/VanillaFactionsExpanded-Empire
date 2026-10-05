@@ -15,20 +15,37 @@ public enum ConspiracyAnswer
     Truce
 }
 
+//How a conspirator fights, decided once for the plot: GameComponent_Conspiracy.HowFights
+public enum ConspiratorFights
+{
+    Undecided,
+    HandToHand,
+    Shooting
+}
+
 //The Brutus: during the parade's deserter raid, one colonist per stellarch turns on her, with allies. The plot runs here
 //rather than in the parade because it plays out whatever happens to the parade, and so does everything it leaves behind:
 //conspirators guilty for good, truces that hold until a colonist kills one of them, and the fights its answers start
 public class GameComponent_Conspiracy : GameComponent
 {
-    //The strike waits until no enemy is near her, but for no more than an hour once a conspirator is in reach of her,
-    //and comes two hours into the approach whatever happens
+    //Each conspirator takes up position for the way it fights best, close enough to touch the one it strikes first or with
+    //a clear shot at them from no further than this, and the Brutus in position is the signal for all of them
+    public const float ShootingDistance = 5f;
+
+    //Once the Brutus is in position the strike waits this long at most for the allies that fight hand to hand, and comes the
+    //moment every one of them is in touch of its mark: about four seconds at normal speed, long enough for an ally a few
+    //cells off to arrive, and short of what it takes to run down a guard far off
+    private const int AllyGraceTicks = 250;
+
+    //The strike waits until no enemy is near her, but for no more than an hour once the Brutus is in position, and comes
+    //two hours into the approach whatever happens
     private const float EnemyNearRadius = 12f;
     private const int MaxWaitForEnemiesTicks = GenDate.TicksPerHour;
     private const int MaxApproachTicks = 2 * GenDate.TicksPerHour;
 
     //As a delegation's cell gathers on its leader, the allies first gather on the Brutus, in the Brutus's room and within
-    //this of the Brutus, then go for her behind the Brutus, so none strikes alone with the others rooms away. A straggler
-    //holds up neither the gathering nor the strike for more than half an hour
+    //this of the Brutus, before each goes for the one it strikes first. A straggler holds up the gathering for half an hour
+    //at most
     private const float GroupRadius = 5f;
     private const int StragglerWaitTicks = 1250;
 
@@ -83,7 +100,10 @@ public class GameComponent_Conspiracy : GameComponent
     public override void GameComponentTick()
     {
         var ticks = Find.TickManager.TicksGame;
-        if (plot is { decisionPending: false } && ticks % 30 == 0) UpdatePlot();
+        //Every tick while any conspirator that fights hand to hand closes in, since it may be in touch of a mark on the move
+        //for a moment only
+        if (plot is { decisionPending: false } && (ticks % 30 == 0 || plot is { gathered: true, striking: false } && plot.Conspirators.Any(FightsHandToHand)))
+            UpdatePlot();
         if (ticks % 250 == 0) UpdateFights();
         if (ticks % GenDate.TicksPerHour == 0) RenewGuilt();
     }
@@ -141,6 +161,7 @@ public class GameComponent_Conspiracy : GameComponent
             startTick = Find.TickManager.TicksGame,
             difficulty = difficulty
         };
+        foreach (var pawn in plot.Conspirators) plot.fights[pawn] = HowFights(pawn);
         plot.fallbackHeir = FallbackHeir(plot);
         plot.RecordOpinions();
         betrayedStellarchs.Add(stellarch.GetUniqueLoadID());
@@ -184,20 +205,92 @@ public class GameComponent_Conspiracy : GameComponent
         }
 
         if (plot.striking) return;
-        var together = Together();
         if (!plot.gathered)
         {
-            if (!together && now - plot.startTick < StragglerWaitTicks) return;
+            if (!Together() && now - plot.startTick < StragglerWaitTicks) return;
             plot.gathered = true;
         }
 
-        var inReach = plot.Conspirators.Any(pawn => pawn.MentalState is MentalState_ConspiratorApproach && pawn.Spawned
-         && LordToil_AssassinApproach.InStrikingDistance(pawn, stellarch));
-        if (inReach && plot.inReachSinceTick < 0) plot.inReachSinceTick = now;
-        var inReachFor = plot.inReachSinceTick < 0 ? 0 : now - plot.inReachSinceTick;
-        if ((inReach && (together || inReachFor >= StragglerWaitTicks) && (!EnemyNear(stellarch) || inReachFor >= MaxWaitForEnemiesTicks))
+        //The Brutus in position is the signal. The allies close in on their own marks meanwhile: the strike waits a moment
+        //for those that fight hand to hand to be in touch of theirs (AllyGraceTicks), and the rest strike from wherever the
+        //signal finds them
+        var brutus = plot.brutus;
+        var inPosition = brutus.MentalState is MentalState_ConspiratorApproach && InPosition(brutus, MarkFor(brutus));
+        if (inPosition && plot.inPositionSinceTick < 0) plot.inPositionSinceTick = now;
+        var inPositionFor = plot.inPositionSinceTick < 0 ? 0 : now - plot.inPositionSinceTick;
+        if ((inPosition && (inPositionFor >= AllyGraceTicks || AlliesInTouch()) && (!EnemyNear(stellarch) || inPositionFor >= MaxWaitForEnemiesTicks))
          || now - plot.startTick >= MaxApproachTicks)
             Strike();
+    }
+
+    //Every ally still closing in that fights hand to hand is in touch of its mark: one down, away or shooting holds nothing up
+    private bool AlliesInTouch() => plot.allies.All(ally => ally.MentalState is not MentalState_ConspiratorApproach || ally.Downed
+        || !ally.Spawned || ally.Map != plot.map || !FightsHandToHand(ally) || InPosition(ally, MarkFor(ally)));
+
+    //Whom a conspirator strikes first, and so stands ready by until the strike. The Brutus: her on Losing is fun, when there
+    //is a way to her; otherwise the guard nearest her when it sets off. An ally: one of her guards, spread across them, the
+    //one the fewest are marked for and then the nearest. Each keeps its mark while that guard stands, and her once none does
+    public Pawn MarkFor(Pawn pawn)
+    {
+        if (!IsConspirator(pawn)) return null;
+        if (GoesStraightForHer(pawn)) return plot.stellarch;
+        if (plot.marks.TryGetValue(pawn, out var kept) && kept != null && kept != plot.stellarch && plot.guards.Contains(kept) && Standing(kept, pawn))
+            return kept;
+        var standing = plot.guards.Where(guard => Standing(guard, pawn)).ToList();
+        Pawn mark;
+        if (standing.Count == 0) mark = plot.stellarch;
+        else if (pawn == plot.brutus)
+        {
+            var her = plot.stellarch.PositionHeld;
+            mark = standing.OrderBy(guard => guard.Position.DistanceToSquared(her)).First();
+        }
+        else
+            mark = standing.OrderBy(guard => plot.marks.Count(pair => pair.Key != pawn && pair.Value == guard && InPlot(pair.Key)))
+               .ThenBy(guard => guard.Position.DistanceToSquared(pawn.Position))
+               .First();
+        return plot.marks[pawn] = mark;
+    }
+
+    //In position for the way a conspirator fights: close enough to touch its mark, or near enough to it with a clear shot
+    public bool InPosition(Pawn pawn, Pawn mark)
+    {
+        var spot = mark.SpawnedParentOrMe;
+        if (!pawn.Spawned || spot == null || spot.Map != pawn.Map) return false;
+        if (FightsHandToHand(pawn)) return pawn.CanReachImmediate(spot, PathEndMode.Touch);
+        var verb = pawn.equipment?.PrimaryEq?.PrimaryVerb;
+        return verb != null && pawn.Position.InHorDistOf(spot.Position, ShootingDistanceFor(verb)) && verb.CanHitTarget(spot);
+    }
+
+    //Up close, unless the gun cannot fire at that range
+    public static float ShootingDistanceFor(Verb verb) => System.Math.Max(ShootingDistance, verb.verbProps.minRange + 1f);
+
+    //Every conspirator fights whichever way it does more damage (HowFights), decided once
+    public bool FightsHandToHand(Pawn pawn)
+    {
+        if (!IsConspirator(pawn)) return false;
+        if (!plot.fights.TryGetValue(pawn, out var fights) || fights == ConspiratorFights.Undecided) plot.fights[pawn] = fights = HowFights(pawn);
+        return fights == ConspiratorFights.HandToHand;
+    }
+
+    //The damage a conspirator does in a second hand to hand, by the game's own melee damage stat, against what it does
+    //shooting
+    private static ConspiratorFights HowFights(Pawn pawn) =>
+        ShootingDamagePerSecond(pawn) > pawn.GetStatValue(StatDefOf.MeleeDPS) ? ConspiratorFights.Shooting : ConspiratorFights.HandToHand;
+
+    //What a pawn's gun does in a second from up close: its burst, at the pawn's chance to hit from there, over the burst's
+    //full cycle of aiming, firing and cooling down. Nothing without a gun, or when the pawn's apparel stops it shooting
+    private static float ShootingDamagePerSecond(Pawn pawn)
+    {
+        var verb = pawn.equipment?.PrimaryEq?.PrimaryVerb;
+        if (verb is not Verb_LaunchProjectile launcher || verb.IsMeleeAttack || !verb.Available() || verb.ApparelPreventsShooting()) return 0f;
+        var projectile = launcher.Projectile?.projectile;
+        if (projectile?.damageDef == null || !projectile.damageDef.harmsHealth) return 0f;
+        var weapon = verb.EquipmentSource;
+        var distance = ShootingDistanceFor(verb);
+        var hitChance = (verb.verbProps.canGoWild ? ShotReport.HitFactorFromShooter(pawn, distance) : 1f) * verb.verbProps.GetHitChanceFactor(weapon, distance);
+        var cycle = verb.WarmupTime * pawn.GetStatValue(StatDefOf.AimingDelayFactor) + verb.verbProps.AdjustedCooldown(verb, pawn)
+                  + ((verb.BurstShotCount - 1) * verb.TicksBetweenBurstShots).TicksToSeconds();
+        return projectile.GetDamageAmount(weapon) * verb.BurstShotCount * hitChance / System.Math.Max(cycle, 0.1f);
     }
 
     //Every ally still in the plot is on their feet in the Brutus's room and close by, the open map counting as one room
@@ -210,7 +303,8 @@ public class GameComponent_Conspiracy : GameComponent
                                     || ally.GetRoom() == room && ally.Position.InHorDistOf(brutus.Position, GroupRadius));
     }
 
-    //Who an ally keeps to while the plot approaches her, and whether the Brutus waits for them: JobGiver_ConspiratorApproach
+    //Whom an ally gathers on before the plot sets off, and keeps to afterwards if it shoots, and whether the Brutus waits for
+    //them: JobGiver_ConspiratorApproach
     public Pawn GatheringOn(Pawn pawn) => plot != null && pawn != plot.brutus && plot.brutus.Spawned ? plot.brutus : null;
 
     public bool WaitingForAllies(Pawn pawn) => plot is { gathered: false } && pawn == plot.brutus;
@@ -236,26 +330,44 @@ public class GameComponent_Conspiracy : GameComponent
             ? "VFEE.Conspiracy.Strike".Translate(plot.brutus.Named("BRUTUS"), plot.stellarch.Named("STELLARCH"))
             : "VFEE.Conspiracy.StrikeWithAllies".Translate(plot.brutus.Named("BRUTUS"), plot.stellarch.Named("STELLARCH"), PawnList(allies).Named("ALLIES"));
         if (plot.guards.Count > 0)
-            text += " " + (alone ? "VFEE.Conspiracy.StrikeGuardsAlone" : "VFEE.Conspiracy.StrikeGuards").Translate(plot.brutus.Named("BRUTUS"),
-                plot.stellarch.Named("STELLARCH"));
+        {
+            //Who goes for whom: StrikeTargetFor
+            var key = GoesStraightForHer(plot.brutus)
+                ? alone ? "VFEE.Conspiracy.StrikeHerFirstAlone" : "VFEE.Conspiracy.StrikeHerFirst"
+                : alone ? "VFEE.Conspiracy.StrikeGuardsAlone" : "VFEE.Conspiracy.StrikeGuards";
+            text += " " + key.Translate(plot.brutus.Named("BRUTUS"), plot.stellarch.Named("STELLARCH"));
+        }
+
         text += "\n\n" + (alone ? "VFEE.Conspiracy.StrikeRulesAlone" : "VFEE.Conspiracy.StrikeRules").Translate(plot.brutus.Named("BRUTUS"),
             plot.stellarch.Named("STELLARCH"));
         Find.LetterStack.ReceiveLetter("VFEE.Conspiracy.StrikeLabel".Translate(plot.brutus.Named("BRUTUS")), text, LetterDefOf.ThreatBig,
             new LookTargets(strikers));
     }
 
-    //Guards first, spread across them, then her
+    //Guards first, spread across them, then her, each conspirator starting on the one it stood ready by (MarkFor). On
+    //Losing is fun the Brutus goes straight for her and leaves her guards to the allies, unless there is no way to reach
+    //her; on Normal it starts on a guard too, since a Brutus who goes straight for her can kill her before the player has
+    //had a chance to answer
     public Pawn StrikeTargetFor(Pawn pawn, Pawn current)
     {
         if (plot is not { striking: true }) return null;
-
-        bool Standing(Pawn guard) => !guard.Dead && !guard.Downed && guard.Spawned && guard.Map == pawn.Map;
-
-        if (current != null && current != plot.stellarch && plot.guards.Contains(current) && Standing(current)) return current;
-        var standing = plot.guards.Where(Standing).ToList();
+        if (GoesStraightForHer(pawn)) return plot.stellarch;
+        if (current == null && plot.marks.TryGetValue(pawn, out var mark)) current = mark;
+        if (current != null && current != plot.stellarch && plot.guards.Contains(current) && Standing(current, pawn)) return current;
+        var standing = plot.guards.Where(guard => Standing(guard, pawn)).ToList();
         if (standing.Count > 0)
             return standing.OrderBy(guard => AttackersOf(guard, pawn)).ThenBy(guard => guard.Position.DistanceToSquared(pawn.Position)).First();
         return plot.stellarch.Dead || plot.stellarch.MapHeld != pawn.Map ? null : plot.stellarch;
+    }
+
+    private static bool Standing(Pawn guard, Pawn by) => !guard.Dead && !guard.Downed && guard.Spawned && guard.Map == by.Map;
+
+    //The Brutus on Losing is fun, with a way to her: the strike's letter asks this too, so it says what the Brutus does
+    private bool GoesStraightForHer(Pawn pawn)
+    {
+        var stellarch = plot.stellarch;
+        return pawn == plot.brutus && plot.difficulty == AscensionDifficulty.LosingIsFun && !stellarch.Dead && stellarch.MapHeld == pawn.Map
+            && pawn.CanReach(stellarch.SpawnedParentOrMe, PathEndMode.Touch, Danger.Deadly, true);
     }
 
     private int AttackersOf(Pawn guard, Pawn except) =>
@@ -635,7 +747,14 @@ public class Conspiracy : IExposable
     public Map map;
     public Pawn fallbackHeir;
     public int startTick;
-    public int inReachSinceTick = -1;
+    public int inPositionSinceTick = -1;
+    //How each conspirator fights (GameComponent_Conspiracy.HowFights), and whom each strikes first (MarkFor)
+    public Dictionary<Pawn, ConspiratorFights> fights = new();
+    public Dictionary<Pawn, Pawn> marks = new();
+    private List<Pawn> fightsKeys;
+    private List<ConspiratorFights> fightsValues;
+    private List<Pawn> markKeys;
+    private List<Pawn> markValues;
     //The allies have gathered on the Brutus, or the time to wait for a straggler is up
     public bool gathered;
     public bool striking;
@@ -666,7 +785,13 @@ public class Conspiracy : IExposable
 
     public void ExposeData()
     {
-        if (Scribe.mode == LoadSaveMode.Saving) opinionsOfHer.RemoveAll(pair => pair.Key == null || pair.Key.Destroyed || pair.Key.Dead);
+        if (Scribe.mode == LoadSaveMode.Saving)
+        {
+            opinionsOfHer.RemoveAll(pair => pair.Key == null || pair.Key.Destroyed || pair.Key.Dead);
+            fights.RemoveAll(pair => pair.Key == null || pair.Key.Destroyed || pair.Key.Dead);
+            marks.RemoveAll(pair => pair.Key == null || pair.Key.Destroyed || pair.Key.Dead || pair.Value == null || pair.Value.Destroyed || pair.Value.Dead);
+        }
+
         //A dead pawn counts as destroyed, and a plain reference to it saves as null; her corpse keeps her, so these keep the dead
         Scribe_References.Look(ref stellarch, "stellarch", true);
         Scribe_References.Look(ref brutus, "brutus", true);
@@ -675,7 +800,9 @@ public class Conspiracy : IExposable
         Scribe_References.Look(ref map, "map");
         Scribe_References.Look(ref fallbackHeir, "fallbackHeir");
         Scribe_Values.Look(ref startTick, "startTick");
-        Scribe_Values.Look(ref inReachSinceTick, "inReachSinceTick", -1);
+        Scribe_Values.Look(ref inPositionSinceTick, "inPositionSinceTick", -1);
+        Scribe_Collections.Look(ref fights, "fights", LookMode.Reference, LookMode.Value, ref fightsKeys, ref fightsValues);
+        Scribe_Collections.Look(ref marks, "marks", LookMode.Reference, LookMode.Reference, ref markKeys, ref markValues);
         Scribe_Values.Look(ref gathered, "gathered");
         Scribe_Values.Look(ref striking, "striking");
         Scribe_Values.Look(ref decisionPending, "decisionPending");
@@ -686,9 +813,13 @@ public class Conspiracy : IExposable
         allies ??= new();
         guards ??= new();
         opinionsOfHer ??= new();
+        fights ??= new();
+        marks ??= new();
         allies.RemoveAll(pawn => pawn == null);
         guards.RemoveAll(pawn => pawn == null);
         opinionsOfHer.RemoveAll(pair => pair.Key == null);
+        fights.RemoveAll(pair => pair.Key == null);
+        marks.RemoveAll(pair => pair.Key == null || pair.Value == null);
     }
 }
 

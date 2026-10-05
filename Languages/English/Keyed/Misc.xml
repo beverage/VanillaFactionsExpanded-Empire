@@ -106,6 +106,8 @@
 	<VFEE.Conspiracy.StrikeWithAllies>{BRUTUS_nameFull} has turned on {STELLARCH_nameDef}, with {ALLIES} at {BRUTUS_possessive} side!</VFEE.Conspiracy.StrikeWithAllies>
 	<VFEE.Conspiracy.StrikeGuards>They are going for {STELLARCH_possessive} guards first, then for {STELLARCH_objective}.</VFEE.Conspiracy.StrikeGuards>
 	<VFEE.Conspiracy.StrikeGuardsAlone>{BRUTUS_nameDef} is going for {STELLARCH_possessive} guards first, then for {STELLARCH_objective}.</VFEE.Conspiracy.StrikeGuardsAlone>
+	<VFEE.Conspiracy.StrikeHerFirst>{BRUTUS_nameDef} is going straight for {STELLARCH_objective}. The others are going for {STELLARCH_possessive} guards first, then for {STELLARCH_objective}.</VFEE.Conspiracy.StrikeHerFirst>
+	<VFEE.Conspiracy.StrikeHerFirstAlone>{BRUTUS_nameDef} is going straight for {STELLARCH_objective}, ignoring {STELLARCH_possessive} guards.</VFEE.Conspiracy.StrikeHerFirstAlone>
 	<VFEE.Conspiracy.StrikeRules>The deserters will leave the plotters alone. If {BRUTUS_nameDef} falls before {STELLARCH_nameDef} does, the plot fails and the others surrender. If {STELLARCH_nameDef} dies, what happens next is your decision.</VFEE.Conspiracy.StrikeRules>
 	<VFEE.Conspiracy.StrikeRulesAlone>The deserters will leave {BRUTUS_objective} alone. If {BRUTUS_nameDef} falls before {STELLARCH_nameDef} does, the plot fails. If {STELLARCH_nameDef} dies, what happens next is your decision.</VFEE.Conspiracy.StrikeRulesAlone>
 	<VFEE.Conspiracy.FoiledLabel>Plot foiled</VFEE.Conspiracy.FoiledLabel>

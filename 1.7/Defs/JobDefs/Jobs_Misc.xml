@@ -24,4 +24,10 @@
         <reportString>discarding TargetA</reportString>
         <casualInterruptible>false</casualInterruptible>
     </JobDef>
+    <!-- The Brutus closing in on the one it strikes first: it reads as vanilla's FollowClose does -->
+    <JobDef>
+        <defName>VFEE_ConspiratorCloseIn</defName>
+        <driverClass>VFEEmpire.JobDriver_ConspiratorCloseIn</driverClass>
+        <reportString>following TargetA.</reportString>
+    </JobDef>
 </Defs>
