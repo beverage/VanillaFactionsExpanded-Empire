@@ -9,17 +9,19 @@ namespace VFEEmpire;
 
 public class QuestNode_Root_RoyalParade : QuestNode
 {
-    protected override bool TestRunInt(Slate slate)
-    {
-        var map = QuestGen_Get.GetMap();
-        if (map == null) return false;
-        var leadTitle = map.mapPawns.FreeColonistsSpawned
-            .Where(x => x.IsFreeNonSlaveColonist && !x.IsQuestLodger())
-            .Select(x => x.royalty.MostSeniorTitle)
-            .OrderByDescending(x => x?.def?.seniority ?? 0f)
-            .FirstOrDefault(); //Title of highest colony member            
-        return leadTitle != null && leadTitle.def.defName == "Stellarch" && !Faction.OfPlayer.HostileTo(Faction.OfEmpire);
-    }
+    protected override bool TestRunInt(Slate slate) => StellarchMap() != null && !Faction.OfPlayer.HostileTo(Faction.OfEmpire);
+
+    //The first home map whose highest title is Stellarch, from the maps QuestGen_Get.GetMap picks among. The test and the
+    //run each called GetMap, which draws a random home map, so with two colonies the offer could pass its test on one and
+    //be built on the other, where RunInt found no stellarch, threw, and left an empty offer
+    private static Map StellarchMap() => Find.Maps.FirstOrDefault(map =>
+        map.IsPlayerHome && !map.Tile.LayerDef.isSpace && LeadTitle(map)?.def.defName == "Stellarch");
+
+    private static RoyalTitle LeadTitle(Map map) => map.mapPawns.FreeColonistsSpawned
+        .Where(x => x.IsFreeNonSlaveColonist && !x.IsQuestLodger())
+        .Select(x => x.royalty.MostSeniorTitle)
+        .OrderByDescending(x => x?.def?.seniority ?? 0f)
+        .FirstOrDefault(); //Title of highest colony member
 
     protected override void RunInt()
     {
@@ -27,7 +29,7 @@ public class QuestNode_Root_RoyalParade : QuestNode
         var slate = QuestGen.slate;
 
         //Getting Initial requirement
-        var map = QuestGen_Get.GetMap();
+        var map = StellarchMap();
         var points = slate.Get<float>("points");
 
         var empire = Find.FactionManager.OfEmpire;
