@@ -4,8 +4,10 @@ using Verse.AI;
 
 namespace VFEEmpire;
 
-//Cut down the guards, spread across them, then the stellarch: shoot when there is a clear shot, move for one when there
-//is not, and close in to fight hand to hand when there is nowhere to shoot from. Only the stellarch is finished once down.
+//Cut down the guards, spread across them, then the stellarch, but on Losing is fun the Brutus goes for the stellarch first
+//(GameComponent_Conspiracy.StrikeTargetFor). Shoot when there is a clear shot, move for one when there is not, and close in
+//to fight hand to hand when there is nowhere to shoot from. A conspirator that fights best hand to hand does so whatever
+//it carries, unless there is no way to its target. Only the stellarch is finished off once down.
 public class JobGiver_ConspiratorStrike : ThinkNode_JobGiver
 {
     protected override Job TryGiveJob(Pawn pawn)
@@ -18,7 +20,8 @@ public class JobGiver_ConspiratorStrike : ThinkNode_JobGiver
         if (spot == null || spot.Map != pawn.Map) return null;
         var finish = target == conspiracy.plot.stellarch;
         var verb = pawn.TryGetAttackVerb(spot);
-        if (verb != null && !verb.IsMeleeAttack)
+        var handToHand = conspiracy.FightsHandToHand(pawn) && pawn.CanReach(spot, PathEndMode.Touch, Danger.Deadly, true);
+        if (verb != null && !verb.IsMeleeAttack && !handToHand)
         {
             if (verb.CanHitTarget(spot))
             {
