@@ -36,6 +36,7 @@ public static class VFEE_DefOf
     public static RoyalTitleDef Emperor;
     public static QuestScriptDef VFEE_NobleVisit;
     public static QuestScriptDef VFEE_Parade;
+    public static HediffDef VFEE_CourtStimulant;
     public static SoundDef VFEE_BombBeep;
     public static JobDef VFEE_DefuseBomb;
     public static JobDef VFEE_PlaceBomb;
