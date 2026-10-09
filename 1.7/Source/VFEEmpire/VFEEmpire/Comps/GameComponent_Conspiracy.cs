@@ -92,6 +92,12 @@ public class GameComponent_Conspiracy : GameComponent
 
     public bool KilledByPlot(Pawn pawn) => pawn != null && pawn == killedByPlot;
 
+    //Dev mode, from the ascension console: the conspirators strike now, wherever they are
+    public void DebugStrike()
+    {
+        if (plot is { striking: false, decisionPending: false }) Strike();
+    }
+
     private static bool Fighting(Pawn pawn) => pawn.Spawned && !pawn.Dead && !pawn.Downed && !pawn.IsPrisoner && pawn.HostileTo(Faction.OfPlayer);
 
     private static bool InPlot(Pawn pawn) =>
