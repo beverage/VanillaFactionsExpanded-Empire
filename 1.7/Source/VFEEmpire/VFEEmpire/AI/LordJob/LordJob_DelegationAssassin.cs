@@ -10,12 +10,13 @@ namespace VFEEmpire;
 //A cell of deserters who came with a delegation and have left it together for the stellarch. They gather first and walk
 //to her as one, still in their delegation's faction, so every door opens for them, and reveal themselves together once
 //one of them is at striking distance with the rest beside it: they turn deserter, and from then on they bash doors, dig
-//through walls and finish her if she goes down.
+//through walls and finish her if she goes down. Denouncing one reveals them all on the spot.
 public class LordJob_DelegationAssassin : LordJob
 {
     public Pawn target;
     public Faction delegationFaction;
     public bool revealed;
+    private bool exposedByDenouncing;
     //The approach's progress (LordToil_AssassinApproach): whether they have gathered, since when they have been gathering,
     //and since when one of them has been at striking distance
     public bool gathered;
@@ -61,6 +62,14 @@ public class LordJob_DelegationAssassin : LordJob
         return graph;
     }
 
+    //Denounced while still disguised
+    public void Expose()
+    {
+        if (revealed) return;
+        exposedByDenouncing = true;
+        lord.ReceiveMemo(LordToil_AssassinApproach.StrikeMemo);
+    }
+
     private void Reveal()
     {
         if (revealed) return;
@@ -78,7 +87,9 @@ public class LordJob_DelegationAssassin : LordJob
         var assassins = lord.ownedPawns.ToList();
         if (assassins.Count == 0) return;
         //A lone deserter is named; a cell is listed
-        var key = assassins.Count > 1 ? "VFEE.Delegation.Cell" : "VFEE.Delegation.Assassin";
+        var key = assassins.Count > 1
+            ? exposedByDenouncing ? "VFEE.Delegation.CellExposed" : "VFEE.Delegation.Cell"
+            : exposedByDenouncing ? "VFEE.Delegation.AssassinExposed" : "VFEE.Delegation.Assassin";
         var names = assassins.Select(pawn => pawn.NameShortColored.Resolve()).ToCommaList(true);
         Find.LetterStack.ReceiveLetter((key + "Label").Translate(assassins[0].Named("PAWN"), assassins.Count.Named("COUNT")),
             key.Translate(assassins[0].Named("PAWN"), names.Named("NAMES"), delegationFaction.Named("FACTION"), target.Named("STELLARCH")),
@@ -96,6 +107,14 @@ public class LordJob_DelegationAssassin : LordJob
     {
         base.Notify_PawnLost(p, condition);
         DelegationUtility.RemoveEnvoy(p);
+    }
+
+    public override IEnumerable<Gizmo> GetPawnGizmos(Pawn p)
+    {
+        foreach (var gizmo in base.GetPawnGizmos(p)) yield return gizmo;
+        if (revealed) yield break;
+        var denounce = DelegationUtility.DenounceCommand(p, delegationFaction, false, Expose);
+        if (denounce != null) yield return denounce;
     }
 
     public override void ExposeData()
