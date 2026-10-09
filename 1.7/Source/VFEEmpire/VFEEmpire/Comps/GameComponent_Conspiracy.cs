@@ -40,9 +40,12 @@ public class GameComponent_Conspiracy : GameComponent
     private const float RoleWeight = 2f;
 
     //The line vanilla draws for its own thoughts about a death, here between the colonists who love the stellarch and the rest.
-    //A truce moves the mood of colonists whose opinion of the stellarch was at least this strong either way, and nobody who
-    //loves the stellarch joins the Brutus
+    //A truce moves the mood of colonists whose opinion of the stellarch was at least this strong either way; nobody who loves
+    //the stellarch joins the Brutus; and the plotters of a failed plot weigh on those who do
     private const int TruceOpinionThreshold = 20;
+
+    //How long a failed plot's plotters living in the colony weigh on those who love the stellarch: a year, as the truce's mood
+    private const int TraitorsAmongUsTicks = 60 * GenDate.TicksPerDay;
 
     public static GameComponent_Conspiracy Instance;
 
@@ -52,6 +55,7 @@ public class GameComponent_Conspiracy : GameComponent
     private List<Truce> truces = new();
     private List<Pawn> turncoats = new();
     private List<Pawn> bystanders = new();
+    private List<FoiledPlot> foiled = new();
 
     //Not saved
     private Dialog_NodeTree decisionWindow;
@@ -275,12 +279,22 @@ public class GameComponent_Conspiracy : GameComponent
             surrendered.Add(pawn);
         }
 
+        var survivors = failed.Conspirators.Where(pawn => !pawn.Dead).ToList();
+        if (survivors.Count > 0)
+            foiled.Add(new FoiledPlot
+            {
+                stellarch = failed.stellarch,
+                conspirators = survivors,
+                tick = Find.TickManager.TicksGame
+            });
+
         var text = (outOfReach ? "VFEE.Conspiracy.FoiledOutOfReach" : "VFEE.Conspiracy.FoiledBrutusStopped")
            .Translate(failed.brutus.Named("BRUTUS"), failed.stellarch.Named("STELLARCH"));
         if (surrendered.Count > 0)
             text += " " + (outOfReach ? "VFEE.Conspiracy.FoiledEveryoneSurrendered" : "VFEE.Conspiracy.FoiledSurrendered")
                .Translate(PawnList(surrendered).Named("ALLIES"));
         text += "\n\n" + "VFEE.Conspiracy.GuiltyForGood".Translate();
+        if (survivors.Count > 0) text += " " + "VFEE.Conspiracy.TraitorsAmongUs".Translate(failed.stellarch.Named("STELLARCH"));
         Find.LetterStack.ReceiveLetter("VFEE.Conspiracy.FoiledLabel".Translate(), text, LetterDefOf.PositiveEvent,
             new LookTargets(failed.Conspirators.Where(pawn => pawn.Spawned)));
     }
@@ -534,6 +548,25 @@ public class GameComponent_Conspiracy : GameComponent
         foreach (var pawn in guiltyForGood)
             if (pawn.Faction == Faction.OfPlayer && pawn.guilt != null && pawn.guilt.TicksUntilInnocent < GenDate.TicksPerDay / 2)
                 pawn.guilt.Notify_Guilty(GenDate.TicksPerDay);
+        var now = Find.TickManager.TicksGame;
+        foiled.RemoveAll(plot => now - plot.tick >= TraitorsAmongUsTicks || !plot.conspirators.Any(StillAmongUs));
+    }
+
+    //After a plot against the stellarch fails, for as long as any of its plotters lives in the colony and for a year at most,
+    //the stellarch and everyone who loves the stellarch are uneasy: stage 0 for those colonists, 1 for the stellarch, -1 for
+    //nobody. Arrested or enslaved, a plotter is still here; banished, sold or dead, gone. ThoughtWorker_TraitorsAmongUs
+    public int TraitorsAmongUsStage(Pawn pawn)
+    {
+        if (foiled.Count == 0 || pawn.Faction != Faction.OfPlayer) return -1;
+        var now = Find.TickManager.TicksGame;
+        foreach (var plot in foiled)
+        {
+            if (now - plot.tick >= TraitorsAmongUsTicks || plot.conspirators.Contains(pawn) || !plot.conspirators.Any(StillAmongUs)) continue;
+            if (pawn == plot.stellarch) return 1;
+            if (plot.stellarch != null && pawn.relations.OpinionOf(plot.stellarch) >= TruceOpinionThreshold) return 0;
+        }
+
+        return -1;
     }
 
     private static bool StillAmongUs(Pawn pawn) => pawn is { Dead: false, Destroyed: false } && (pawn.Faction == Faction.OfPlayer || pawn.IsPrisonerOfColony);
@@ -569,6 +602,8 @@ public class GameComponent_Conspiracy : GameComponent
             bystanders.RemoveAll(pawn => pawn == null || pawn.Destroyed || pawn.Dead);
             foreach (var truce in truces) truce.conspirators.RemoveAll(pawn => pawn == null || pawn.Destroyed || pawn.Dead);
             truces.RemoveAll(truce => truce.conspirators.Count == 0);
+            foreach (var plot in foiled) plot.conspirators.RemoveAll(pawn => pawn == null || pawn.Destroyed || pawn.Dead);
+            foiled.RemoveAll(plot => plot.conspirators.Count == 0);
         }
 
         Scribe_Deep.Look(ref plot, "plot");
@@ -577,12 +612,14 @@ public class GameComponent_Conspiracy : GameComponent
         Scribe_Collections.Look(ref truces, "truces", LookMode.Deep);
         Scribe_Collections.Look(ref turncoats, "turncoats", LookMode.Reference);
         Scribe_Collections.Look(ref bystanders, "bystanders", LookMode.Reference);
+        Scribe_Collections.Look(ref foiled, "foiled", LookMode.Deep);
         if (Scribe.mode != LoadSaveMode.PostLoadInit) return;
         betrayedStellarchs ??= new();
         guiltyForGood ??= new();
         truces ??= new();
         turncoats ??= new();
         bystanders ??= new();
+        foiled ??= new();
         guiltyForGood.RemoveAll(pawn => pawn == null);
         turncoats.RemoveAll(pawn => pawn == null);
         bystanders.RemoveAll(pawn => pawn == null);
@@ -652,6 +689,25 @@ public class Conspiracy : IExposable
         allies.RemoveAll(pawn => pawn == null);
         guards.RemoveAll(pawn => pawn == null);
         opinionsOfStellarch.RemoveAll(pair => pair.Key == null);
+    }
+}
+
+//A plot that failed with plotters left alive, who weigh on the stellarch and on those who love the stellarch while they
+//live in the colony
+public class FoiledPlot : IExposable
+{
+    public Pawn stellarch;
+    public List<Pawn> conspirators = new();
+    public int tick;
+
+    public void ExposeData()
+    {
+        Scribe_References.Look(ref stellarch, "stellarch", true);
+        Scribe_Collections.Look(ref conspirators, "conspirators", LookMode.Reference);
+        Scribe_Values.Look(ref tick, "tick");
+        if (Scribe.mode != LoadSaveMode.PostLoadInit) return;
+        conspirators ??= new();
+        conspirators.RemoveAll(pawn => pawn == null);
     }
 }
 
