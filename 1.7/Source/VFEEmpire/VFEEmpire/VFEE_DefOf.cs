@@ -47,6 +47,9 @@ public static class VFEE_DefOf
     public static JobDef VFEE_PoisonMeal;
     public static JobDef VFEE_DiscardMeal;
     public static DutyDef VFEE_KillRoyalty;
+    public static DutyDef VFEE_AssassinApproach;
+    public static DutyDef VFEE_AssassinStrike;
+    public static TraitDef VFEE_Envoy;
     public static PreceptDef VFEE_BestowHonor;
     public static TerrainDef VFEE_ThickAsh;
     public static TraitDef NaturalMood;
