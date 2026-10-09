@@ -53,6 +53,15 @@ public class LordJob_Parade : LordJob_Ritual
     public Pawn visitorLead;
     private int ticksSinceConfetti;
 
+    //The stellarch and her guards stay in the parade when drafted, and the procession waits for them, but each
+    //can only spend this long drafted across the whole parade. The parade's own clock keeps running.
+    public static readonly int draftedTicksAllowed = 2 * GenDate.TicksPerHour;
+    public Dictionary<Pawn, int> draftedTicks = new();
+    private List<Pawn> draftedTicksKeys;
+    private List<int> draftedTicksValues;
+    private readonly HashSet<Pawn> draftedLastTick = new();
+    private bool wasHalted;
+
     //Not saved: the nobles' court stimulant has been checked since the game loaded (Notify_PawnAdded gives it after that)
     private bool keptAwake;
 
@@ -125,8 +134,37 @@ public class LordJob_Parade : LordJob_Ritual
         Scribe_Collections.Look(ref guards, "guards", LookMode.Reference);
         Scribe_Collections.Look(ref colonistParticipants, "colonistParticipants", LookMode.Reference);
         Scribe_Collections.Look(ref stops, "stops", LookMode.Value);
+        Scribe_Collections.Look(ref draftedTicks, "draftedTicks", LookMode.Reference, LookMode.Value, ref draftedTicksKeys, ref draftedTicksValues);
         Scribe_Collections.Look(ref assignedGuards, "assignedGuards", LookMode.Reference);
-        if (Scribe.mode == LoadSaveMode.PostLoadInit) assignedGuards ??= guards?.ToList() ?? new();
+        if (Scribe.mode == LoadSaveMode.PostLoadInit)
+        {
+            draftedTicks ??= new();
+            assignedGuards ??= guards?.ToList() ?? new();
+        }
+    }
+
+    public bool Halted => paradeStarted && !paradeFinished && (stellarch.Drafted || guards.Any(guard => guard.Drafted));
+
+    public int DraftedTicksLeft(Pawn pawn) => Mathf.Max(0, draftedTicksAllowed - draftedTicks.TryGetValue(pawn));
+
+    //In tenths of an hour: vanilla's periods round anything over an hour to whole hours, so 1.6 hours left would read 2
+    private string DraftTimeLeft(Pawn pawn)
+    {
+        var hours = (DraftedTicksLeft(pawn) / (float)GenDate.TicksPerHour).ToString("0.#");
+        return hours == "1" ? "Period1Hour".Translate() : "PeriodHours".Translate(hours);
+    }
+
+    private bool DraftableInParade(Pawn pawn) => paradeStarted && !paradeFinished && (pawn == stellarch || guards.Contains(pawn));
+
+    private bool DraftedTooLong => draftedTicks.Any(drafted => drafted.Value >= draftedTicksAllowed);
+
+    //What the procession does while it waits: stand where it is, and look again as soon as the wait is over
+    public static Job WaitWhileHalted()
+    {
+        var job = JobMaker.MakeJob(JobDefOf.Wait);
+        job.expiryInterval = 120;
+        job.checkOverrideOnExpire = true;
+        return job;
     }
 
     //The spot is fixed when the nobles are sent, from the cell their shuttle is meant to land on, but the shuttle comes down
@@ -208,6 +246,7 @@ public class LordJob_Parade : LordJob_Ritual
         //transition_ParadeInterupted.AddTrigger(new Trigger_PawnHarmed()); taking out pawn harmed as instant fail as can be triggered super easily
         transition_ParadeInterupted.AddTrigger(new Trigger_ParadeLostViolently());
         transition_ParadeInterupted.AddTrigger(new Trigger_Signal(questEndedSignal));
+        transition_ParadeInterupted.AddTrigger(new Trigger_TickCondition(() => DraftedTooLong, 60));
         graph.transitions.Add(transition_ParadeInterupted);
 
 
@@ -313,6 +352,7 @@ public class LordJob_Parade : LordJob_Ritual
         if (paradeStarted && !paradeFinished)
         {
             outcome.Tick(this);
+            CountDraftedTime();
             if (!allAtStart)
             {
                 if (shuttle.DestroyedOrNull() || shuttle.OccupiedRect().ExpandedBy(3).Contains(stellarch.Position))
@@ -349,7 +389,10 @@ public class LordJob_Parade : LordJob_Ritual
                 else
                     effecters.Remove(effecter);
 
-            if (duration / stops.Count - ticksThisRotation <= 0 && AtDestination)
+            //Each stop takes an even share of the time left, so a stop held over by a halt shortens the ones after it, and
+            //the parade keeps to its duration
+            var rotationTicks = (duration - (ticksPassed - ticksThisRotation)) / (stops.Count - stage);
+            if (ticksThisRotation >= rotationTicks && AtDestination && !Halted)
             {
                 RoomSwap();
                 ticksThisRotation = 0;
@@ -360,6 +403,38 @@ public class LordJob_Parade : LordJob_Ritual
             if (ticksPassed == bombSpawn) SpawnBomb();
             if (ticksPassed == murders) Murderers();
         }
+    }
+
+    private void CountDraftedTime()
+    {
+        CountDraftedTime(stellarch);
+        foreach (var guard in guards) CountDraftedTime(guard);
+        var halted = Halted;
+        if (halted == wasHalted) return;
+        wasHalted = halted;
+        foreach (var pawn in lord.ownedPawns.ListFullCopy())
+            if (!pawn.Drafted)
+                pawn.jobs?.CheckForJobOverride();
+    }
+
+    private void CountDraftedTime(Pawn pawn)
+    {
+        if (!pawn.Drafted)
+        {
+            draftedLastTick.Remove(pawn);
+            return;
+        }
+
+        var ticks = draftedTicks.TryGetValue(pawn) + 1;
+        draftedTicks[pawn] = ticks;
+        if (draftedLastTick.Add(pawn))
+            Messages.Message("VFEE.Parade.Drafted".Translate(pawn.Named("PAWN"), DraftTimeLeft(pawn).Named("TIME")), pawn,
+                MessageTypeDefOf.CautionInput);
+        else if (ticks == draftedTicksAllowed - GenDate.TicksPerHour / 2)
+            Messages.Message("VFEE.Parade.DraftTimeRunningOut".Translate(pawn.Named("PAWN"), DraftTimeLeft(pawn).Named("TIME")), pawn,
+                MessageTypeDefOf.NegativeEvent);
+        else if (ticks == draftedTicksAllowed)
+            Messages.Message("VFEE.Parade.DraftedTooLong".Translate(pawn.Named("PAWN")), pawn, MessageTypeDefOf.NegativeEvent);
     }
 
     public void CheckForEffect()
@@ -503,11 +578,30 @@ public class LordJob_Parade : LordJob_Ritual
 
     //Vanilla lets a ritual member leave of their own accord when a need or a wound pulls them away. The parade
     //has nobody to lead it without the stellarch, so she cannot leave it that way while it lasts. Once it is over
-    //she can, to be tended before she boards.
-    public override bool ShouldRemovePawn(Pawn p, PawnLostCondition reason) =>
-        p != stellarch || reason != PawnLostCondition.LeftVoluntarily || paradeFinished;
+    //she can, to be tended before she boards. Drafting her or a guard keeps them in it too, on the allowance
+    //CountDraftedTime keeps.
+    public override bool ShouldRemovePawn(Pawn p, PawnLostCondition reason)
+    {
+        if (p == stellarch && reason == PawnLostCondition.LeftVoluntarily && !paradeFinished) return false;
+        return reason != PawnLostCondition.Drafted || !DraftableInParade(p);
+    }
 
-    public override string GetReport(Pawn pawn) => "LordReportAttending".Translate("VFEE.Parade.Label".Translate());
+    //LordJob_Ritual refuses drafting to every member, and Pawn.GetGizmos disables the draft button and every other drafter
+    //button with it, so the stellarch and her guards need this to be drafted at all. Everyone else keeps the refusal
+    public override AcceptanceReport AllowsDrafting(Pawn pawn) => DraftableInParade(pawn) ? AcceptanceReport.WasAccepted : base.AllowsDrafting(pawn);
+
+    //And a drafted one takes orders, which the ritual's refusal of the float menu would stop too. Undrafted, nobody in the
+    //parade can be ordered out of it
+    public override AcceptanceReport AllowsFloatMenu(Pawn pawn) =>
+        DraftableInParade(pawn) && pawn.Drafted ? AcceptanceReport.WasAccepted : base.AllowsFloatMenu(pawn);
+
+    public override string GetReport(Pawn pawn)
+    {
+        var report = "LordReportAttending".Translate("VFEE.Parade.Label".Translate()).Resolve();
+        if (DraftableInParade(pawn))
+            report += " (" + "VFEE.Parade.DraftTimeLeft".Translate(DraftTimeLeft(pawn)).Resolve() + ")";
+        return report;
+    }
 
     protected override bool ShouldCallOffBecausePawnNoLongerOwned(Pawn p) => base.ShouldCallOffBecausePawnNoLongerOwned(p) && !guards.Contains(p);
 

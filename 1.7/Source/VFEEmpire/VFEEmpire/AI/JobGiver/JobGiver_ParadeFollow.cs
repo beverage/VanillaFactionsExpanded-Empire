@@ -13,6 +13,11 @@ namespace VFEEmpire
 		protected override Job TryGiveJob(Pawn pawn)
 		{
 			var parade = pawn.GetLord()?.LordJob as LordJob_Parade;
+			//The procession waits while the stellarch or a guard is drafted, so nobody trails after her
+			if (parade.Halted)
+			{
+				return LordJob_Parade.WaitWhileHalted();
+			}
 
 			if(parade.AtDestination && parade.allAtStart)
             {
