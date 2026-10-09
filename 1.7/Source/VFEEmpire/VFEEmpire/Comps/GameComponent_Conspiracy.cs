@@ -40,9 +40,12 @@ public class GameComponent_Conspiracy : GameComponent
     private const float RoleWeight = 2f;
 
     //The line vanilla draws for its own thoughts about a death, here between the colonists who love her and the rest. A truce
-    //moves the mood of colonists whose opinion of her was at least this strong either way, and nobody who loves her joins
-    //the Brutus against her
+    //moves the mood of colonists whose opinion of her was at least this strong either way; nobody who loves her joins
+    //the Brutus against her; and the plotters of a failed plot weigh on those who love her
     private const int TruceOpinionThreshold = 20;
+
+    //How long a failed plot's plotters weigh on those who love her while they live in the colony: a year, as the truce's mood
+    private const int TraitorsAmongUsTicks = 60 * GenDate.TicksPerDay;
 
     public static GameComponent_Conspiracy Instance;
 
@@ -52,6 +55,7 @@ public class GameComponent_Conspiracy : GameComponent
     private List<Truce> truces = new();
     private List<Pawn> turncoats = new();
     private List<Pawn> bystanders = new();
+    private List<FoiledPlot> foiled = new();
 
     //Not saved
     private Dialog_NodeTree decisionWindow;
@@ -114,7 +118,8 @@ public class GameComponent_Conspiracy : GameComponent
         //As many allies as she has guards, one at most on the Normal difficulty: those who dislike her most, then those who
         //like the Brutus most, then the rest, coolest towards her first
         var guards = parade.guards.Where(guard => guard.Spawned && !guard.Dead && !guard.Downed).ToList();
-        var count = QuestPart_AscensionDifficulty.For(stellarch) == AscensionDifficulty.Normal
+        var difficulty = QuestPart_AscensionDifficulty.For(stellarch);
+        var count = difficulty == AscensionDifficulty.Normal
             ? System.Math.Min(guards.Count, QuestPart_AscensionDifficulty.NormalAllies)
             : guards.Count;
         var others = candidates.Where(pawn => pawn != brutus)
@@ -133,7 +138,8 @@ public class GameComponent_Conspiracy : GameComponent
             allies = allies,
             guards = guards,
             map = parade.Map,
-            startTick = Find.TickManager.TicksGame
+            startTick = Find.TickManager.TicksGame,
+            difficulty = difficulty
         };
         plot.fallbackHeir = FallbackHeir(plot);
         plot.RecordOpinions();
@@ -273,12 +279,22 @@ public class GameComponent_Conspiracy : GameComponent
             surrendered.Add(pawn);
         }
 
+        var survivors = failed.Conspirators.Where(pawn => !pawn.Dead).ToList();
+        if (survivors.Count > 0)
+            foiled.Add(new FoiledPlot
+            {
+                stellarch = failed.stellarch,
+                conspirators = survivors,
+                tick = Find.TickManager.TicksGame
+            });
+
         var text = (outOfReach ? "VFEE.Conspiracy.FoiledOutOfReach" : "VFEE.Conspiracy.FoiledBrutusStopped")
            .Translate(failed.brutus.Named("BRUTUS"), failed.stellarch.Named("STELLARCH"));
         if (surrendered.Count > 0)
             text += " " + (outOfReach ? "VFEE.Conspiracy.FoiledEveryoneSurrendered" : "VFEE.Conspiracy.FoiledSurrendered")
                .Translate(PawnList(surrendered).Named("ALLIES"));
         text += "\n\n" + "VFEE.Conspiracy.GuiltyForGood".Translate();
+        if (survivors.Count > 0) text += " " + "VFEE.Conspiracy.TraitorsAmongUs".Translate(failed.stellarch.Named("STELLARCH"));
         Find.LetterStack.ReceiveLetter("VFEE.Conspiracy.FoiledLabel".Translate(), text, LetterDefOf.PositiveEvent,
             new LookTargets(failed.Conspirators.Where(pawn => pawn.Spawned)));
     }
@@ -323,7 +339,19 @@ public class GameComponent_Conspiracy : GameComponent
     private void OpenDecision()
     {
         var current = plot;
-        var node = new DiaNode("VFEE.Conspiracy.Decision".Translate(current.stellarch.Named("STELLARCH"), current.brutus.Named("BRUTUS")));
+        var text = "VFEE.Conspiracy.Decision".Translate(current.stellarch.Named("STELLARCH"), current.brutus.Named("BRUTUS"));
+        //The truce's lower opinion of the Brutus, which lapses after a year on the Normal difficulty and is never given to a
+        //Brutus already dead
+        if (!current.brutus.Dead)
+        {
+            var opinion = current.difficulty == AscensionDifficulty.Normal
+                ? "VFEE.Conspiracy.DecisionBrutusOpinionNormal"
+                : "VFEE.Conspiracy.DecisionBrutusOpinion";
+            text += " " + opinion.Translate(current.brutus.Named("BRUTUS"));
+        }
+
+        text += " " + "VFEE.Conspiracy.DecisionTruceBreaks".Translate();
+        var node = new DiaNode(text);
         node.options.Add(Answer("VFEE.Conspiracy.AnswerTraitors", ConspiracyAnswer.Traitors));
         var deal = Answer("VFEE.Conspiracy.AnswerDeal", ConspiracyAnswer.Deal);
         if (current.brutus.Dead) deal.Disable("VFEE.Conspiracy.BrutusDead".Translate(current.brutus.Named("BRUTUS")));
@@ -441,7 +469,10 @@ public class GameComponent_Conspiracy : GameComponent
         {
             brutus = done.brutus.Dead ? null : done.brutus,
             conspirators = conspirators.ToList(),
-            stellarchName = done.stellarch.LabelShort
+            stellarchName = done.stellarch.LabelShort,
+            opinionEndsTick = done.difficulty == AscensionDifficulty.Normal
+                ? Find.TickManager.TicksGame + QuestPart_AscensionDifficulty.NormalBrutusOpinionDays * GenDate.TicksPerDay
+                : -1
         });
         foreach (var colonist in PawnsFinder.AllMapsCaravansAndTravellingTransporters_Alive_FreeColonists)
         {
@@ -458,13 +489,12 @@ public class GameComponent_Conspiracy : GameComponent
             LetterDefOf.NeutralEvent, new LookTargets(conspirators.Where(pawn => pawn.Spawned)));
     }
 
-    //The opinion malus of a truce: everyone thinks less of a Brutus who is the colony's highest title holder
-    public bool IsHighestTruceBrutus(Pawn pawn)
-    {
-        if (truces.Count == 0 || pawn.Faction != Faction.OfPlayer || !truces.Any(truce => truce.brutus == pawn)) return false;
-        var seniority = pawn.royalty?.MostSeniorTitle?.def.seniority ?? 0;
-        return seniority > 0 && !PawnsFinder.AllMaps_FreeColonists.Any(other => other != pawn && (other.royalty?.MostSeniorTitle?.def.seniority ?? 0) > seniority);
-    }
+    //The opinion malus of a truce: everyone thinks less of the Brutus for as long as the Brutus stays in the colony, whatever
+    //the Brutus's rank, since a guard or her crowned heir usually outranks the Brutus; on the Normal difficulty for a year at
+    //most. Arrested or enslaved, the Brutus is still here; banished, sold, dead or gone over to the deserters, gone
+    public bool IsTruceBrutus(Pawn pawn) => truces.Count > 0
+     && truces.Any(truce => truce.brutus == pawn && (truce.opinionEndsTick < 0 || Find.TickManager.TicksGame < truce.opinionEndsTick))
+     && StillAmongUs(pawn);
 
     private void MakeTurncoats(List<Pawn> pawns)
     {
@@ -518,7 +548,28 @@ public class GameComponent_Conspiracy : GameComponent
         foreach (var pawn in guiltyForGood)
             if (pawn.Faction == Faction.OfPlayer && pawn.guilt != null && pawn.guilt.TicksUntilInnocent < GenDate.TicksPerDay / 2)
                 pawn.guilt.Notify_Guilty(GenDate.TicksPerDay);
+        var now = Find.TickManager.TicksGame;
+        foiled.RemoveAll(plot => now - plot.tick >= TraitorsAmongUsTicks || !plot.conspirators.Any(StillAmongUs));
     }
+
+    //After a plot against her fails, for as long as any of its plotters lives in the colony and for a year at most, she and
+    //everyone who loves her are uneasy: stage 0 for those who love her, 1 for her, -1 for nobody. Arrested or enslaved, a
+    //plotter is still here; banished, sold or dead, gone. ThoughtWorker_TraitorsAmongUs
+    public int TraitorsAmongUsStage(Pawn pawn)
+    {
+        if (foiled.Count == 0 || pawn.Faction != Faction.OfPlayer) return -1;
+        var now = Find.TickManager.TicksGame;
+        foreach (var plot in foiled)
+        {
+            if (now - plot.tick >= TraitorsAmongUsTicks || plot.conspirators.Contains(pawn) || !plot.conspirators.Any(StillAmongUs)) continue;
+            if (pawn == plot.stellarch) return 1;
+            if (plot.stellarch != null && pawn.relations.OpinionOf(plot.stellarch) >= TruceOpinionThreshold) return 0;
+        }
+
+        return -1;
+    }
+
+    private static bool StillAmongUs(Pawn pawn) => pawn is { Dead: false, Destroyed: false } && (pawn.Faction == Faction.OfPlayer || pawn.IsPrisonerOfColony);
 
     private static void StartState(Pawn pawn, MentalStateDef def) =>
         pawn.mindState.mentalStateHandler.TryStartMentalState(def, forced: true, forceWake: true, transitionSilently: true);
@@ -551,6 +602,8 @@ public class GameComponent_Conspiracy : GameComponent
             bystanders.RemoveAll(pawn => pawn == null || pawn.Destroyed || pawn.Dead);
             foreach (var truce in truces) truce.conspirators.RemoveAll(pawn => pawn == null || pawn.Destroyed || pawn.Dead);
             truces.RemoveAll(truce => truce.conspirators.Count == 0);
+            foreach (var plot in foiled) plot.conspirators.RemoveAll(pawn => pawn == null || pawn.Destroyed || pawn.Dead);
+            foiled.RemoveAll(plot => plot.conspirators.Count == 0);
         }
 
         Scribe_Deep.Look(ref plot, "plot");
@@ -559,12 +612,14 @@ public class GameComponent_Conspiracy : GameComponent
         Scribe_Collections.Look(ref truces, "truces", LookMode.Deep);
         Scribe_Collections.Look(ref turncoats, "turncoats", LookMode.Reference);
         Scribe_Collections.Look(ref bystanders, "bystanders", LookMode.Reference);
+        Scribe_Collections.Look(ref foiled, "foiled", LookMode.Deep);
         if (Scribe.mode != LoadSaveMode.PostLoadInit) return;
         betrayedStellarchs ??= new();
         guiltyForGood ??= new();
         truces ??= new();
         turncoats ??= new();
         bystanders ??= new();
+        foiled ??= new();
         guiltyForGood.RemoveAll(pawn => pawn == null);
         turncoats.RemoveAll(pawn => pawn == null);
         bystanders.RemoveAll(pawn => pawn == null);
@@ -586,6 +641,8 @@ public class Conspiracy : IExposable
     public bool striking;
     public bool decisionPending;
     public bool holdingSuccession;
+    //Taken as the plot begins: the difficulty answers only for an ascension still under way, and hers ends with her death
+    public AscensionDifficulty difficulty;
     public Dictionary<Pawn, int> opinionsOfHer = new();
     private List<Pawn> opinionKeys;
     private List<int> opinionValues;
@@ -623,6 +680,7 @@ public class Conspiracy : IExposable
         Scribe_Values.Look(ref striking, "striking");
         Scribe_Values.Look(ref decisionPending, "decisionPending");
         Scribe_Values.Look(ref holdingSuccession, "holdingSuccession");
+        Scribe_Values.Look(ref difficulty, "difficulty");
         Scribe_Collections.Look(ref opinionsOfHer, "opinionsOfHer", LookMode.Reference, LookMode.Value, ref opinionKeys, ref opinionValues);
         if (Scribe.mode != LoadSaveMode.PostLoadInit) return;
         allies ??= new();
@@ -634,17 +692,38 @@ public class Conspiracy : IExposable
     }
 }
 
+//A plot that failed with plotters left alive, who weigh on her and on those who love her while they live in the colony
+public class FoiledPlot : IExposable
+{
+    public Pawn stellarch;
+    public List<Pawn> conspirators = new();
+    public int tick;
+
+    public void ExposeData()
+    {
+        Scribe_References.Look(ref stellarch, "stellarch", true);
+        Scribe_Collections.Look(ref conspirators, "conspirators", LookMode.Reference);
+        Scribe_Values.Look(ref tick, "tick");
+        if (Scribe.mode != LoadSaveMode.PostLoadInit) return;
+        conspirators ??= new();
+        conspirators.RemoveAll(pawn => pawn == null);
+    }
+}
+
 public class Truce : IExposable
 {
     public Pawn brutus;
     public List<Pawn> conspirators = new();
     public string stellarchName;
+    //When everyone stops thinking less of the Brutus: never (-1), or a year after the truce on the Normal difficulty
+    public int opinionEndsTick = -1;
 
     public void ExposeData()
     {
         Scribe_References.Look(ref brutus, "brutus");
         Scribe_Collections.Look(ref conspirators, "conspirators", LookMode.Reference);
         Scribe_Values.Look(ref stellarchName, "stellarchName");
+        Scribe_Values.Look(ref opinionEndsTick, "opinionEndsTick", -1);
         if (Scribe.mode != LoadSaveMode.PostLoadInit) return;
         conspirators ??= new();
         conspirators.RemoveAll(pawn => pawn == null);

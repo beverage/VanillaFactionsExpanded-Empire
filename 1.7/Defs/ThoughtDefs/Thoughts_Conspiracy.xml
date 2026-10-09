@@ -20,7 +20,26 @@
     </stages>
   </ThoughtDef>
 
-  <!-- After a truce, for as long as the Brutus holds the colony's highest title -->
+  <!-- After a failed plot, while a plotter lives in the colony (a year at most): the stellarch, and colonists at 20 or more opinion of her -->
+  <ThoughtDef>
+    <defName>VFEE_TraitorsAmongUs</defName>
+    <workerClass>VFEEmpire.ThoughtWorker_TraitorsAmongUs</workerClass>
+    <validWhileDespawned>true</validWhileDespawned>
+    <stages>
+      <li>
+        <label>traitors among us</label>
+        <description>Those who plotted against our stellarch still live among us.</description>
+        <baseMoodEffect>-10</baseMoodEffect>
+      </li>
+      <li>
+        <label>my would-be killers among us</label>
+        <description>Those who plotted to kill me still live in this colony.</description>
+        <baseMoodEffect>-10</baseMoodEffect>
+      </li>
+    </stages>
+  </ThoughtDef>
+
+  <!-- After a truce, for as long as the Brutus stays in the colony, whatever the Brutus's rank; a year at most on Normal -->
   <ThoughtDef>
     <defName>VFEE_StellarchsKiller</defName>
     <thoughtClass>Thought_SituationalSocial</thoughtClass>

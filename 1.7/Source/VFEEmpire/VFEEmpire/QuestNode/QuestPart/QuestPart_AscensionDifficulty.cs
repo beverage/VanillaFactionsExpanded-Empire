@@ -10,15 +10,18 @@ public enum AscensionDifficulty
     Normal
 }
 
-//How dangerous an ascension is, asked as its countdown begins (principal, 2026-10-03). Losing is fun is the ascension as
-//built. Normal hides half as many deserters among the delegations, has the parade's deserters plant three bombs instead of
-//five, and leaves the Brutus one ally at most. The window waits for an answer, and comes back after a load until it has one
+//How dangerous an ascension is, asked as its countdown begins. Losing is fun is the ascension as built. Normal hides half as
+//many deserters among the delegations, has the parade's deserters plant three bombs instead of five, leaves the Brutus one
+//ally at most, and lets everyone's lower opinion of a Brutus after a truce lapse after a year rather than last for as long
+//as the Brutus stays. The window waits for an answer, and comes back after a load until it has one
 public class QuestPart_AscensionDifficulty : QuestPartActivable
 {
-    //What Normal changes: QuestPart_Delegations.TrySend, LordJob_Parade.SpawnBomb and GameComponent_Conspiracy.TryBeginPlot
+    //What Normal changes: QuestPart_Delegations.TrySend, LordJob_Parade.SpawnBomb, GameComponent_Conspiracy.TryBeginPlot and
+    //GameComponent_Conspiracy.Truce
     public const float NormalPointsPerDeserterFactor = 2f;
     public const int NormalRoomBombs = 2;
     public const int NormalAllies = 1;
+    public const int NormalBrutusOpinionDays = 60;
 
     public Pawn stellarch;
     public AscensionDifficulty difficulty;
