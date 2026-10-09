@@ -42,9 +42,8 @@
     </researchPrerequisites>
   </ThingDef>
 
-  <ThingDef ParentName="BuildingBase">
-    <defName>VFEE_Bomb</defName>
-    <label>bomb</label>
+  <!-- The deserters' bomb. The parade's five are separate defs, so double-clicking one does not select the others -->
+  <ThingDef ParentName="BuildingBase" Name="VFEE_BombBase" Abstract="True">
     <description>A small, makeshift bomb. Can be easily defused if found on time.</description>
     <thingClass>VFEEmpire.Building_Bomb</thingClass>
     <size>(1, 1)</size>
@@ -62,6 +61,43 @@
       <ComponentIndustrial>1</ComponentIndustrial>
       <Shell_AntigrainWarhead>1</Shell_AntigrainWarhead>
     </killedLeavings>
+  </ThingDef>
+
+  <ThingDef ParentName="VFEE_BombBase">
+    <defName>VFEE_Bomb</defName>
+    <label>bomb</label>
+  </ThingDef>
+
+  <ThingDef ParentName="VFEE_BombBase">
+    <defName>VFEE_BombRed</defName>
+    <label>red bomb</label>
+    <graphicData>
+      <color>(1, 0.45, 0.4)</color>
+    </graphicData>
+  </ThingDef>
+
+  <ThingDef ParentName="VFEE_BombBase">
+    <defName>VFEE_BombBlue</defName>
+    <label>blue bomb</label>
+    <graphicData>
+      <color>(0.45, 0.6, 1)</color>
+    </graphicData>
+  </ThingDef>
+
+  <ThingDef ParentName="VFEE_BombBase">
+    <defName>VFEE_BombGreen</defName>
+    <label>green bomb</label>
+    <graphicData>
+      <color>(0.5, 0.95, 0.45)</color>
+    </graphicData>
+  </ThingDef>
+
+  <ThingDef ParentName="VFEE_BombBase">
+    <defName>VFEE_BombYellow</defName>
+    <label>yellow bomb</label>
+    <graphicData>
+      <color>(1, 0.9, 0.35)</color>
+    </graphicData>
   </ThingDef>
 
 </Defs>

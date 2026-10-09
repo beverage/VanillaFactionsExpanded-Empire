@@ -41,6 +41,10 @@ public static class VFEE_DefOf
     public static JobDef VFEE_DefuseBomb;
     public static JobDef VFEE_PlaceBomb;
     public static ThingDef VFEE_Bomb;
+    public static ThingDef VFEE_BombRed;
+    public static ThingDef VFEE_BombBlue;
+    public static ThingDef VFEE_BombGreen;
+    public static ThingDef VFEE_BombYellow;
     public static DutyDef VFEE_MoveTo;
     public static DutyDef VFEE_AttackEnemySpecifc;
     public static ThingDef VFEE_Poison;
