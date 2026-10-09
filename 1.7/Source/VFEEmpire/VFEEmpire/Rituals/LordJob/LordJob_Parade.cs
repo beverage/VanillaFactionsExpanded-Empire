@@ -185,6 +185,36 @@ public class LordJob_Parade : LordJob_Ritual
     //as she is not while she lies where she fell
     private bool StellarchAway => stellarch.Map != Map && stellarch.ParentHolder is not Pawn_CarryTracker;
 
+    //The parade's clock and its events, for the ascension console (Dialog_AscensionConsole)
+    public int Elapsed => ticksPassed;
+    public static int RaidTick => raidSpawn;
+    public static int BombTick => bombSpawn;
+    public int PlotTick => plotTick;
+
+    //Dev mode, from the ascension console: the clock jumps to just before the tick given, so its event comes next. Each event
+    //the jump passes over still happens on the way, at its own tick and in order: the raid, then the plot's hour the raid
+    //sets if that falls first, then the bombs. Bombs now before the raid used to skip the raid, and the plot with it
+    public void DebugSkipTo(int tick)
+    {
+        for (var next = NextEventAfter(ticksPassed); next < tick; next = NextEventAfter(ticksPassed))
+        {
+            ticksPassed = next;
+            FireEvents();
+        }
+
+        if (tick - 1 > ticksPassed) ticksPassed = tick - 1;
+    }
+
+    //The first event after the tick given, or int.MaxValue; the plot's hour is -1 until the raid sets it
+    private int NextEventAfter(int tick)
+    {
+        var next = int.MaxValue;
+        if (raidSpawn > tick) next = raidSpawn;
+        if (bombSpawn > tick && bombSpawn < next) next = bombSpawn;
+        if (plotTick > tick && plotTick < next) next = plotTick;
+        return next;
+    }
+
     //Vanilla's periods round anything over an hour to whole hours, so 1.6 hours left would read 2: over an hour this gives
     //tenths, and under one vanilla's own tenths and seconds
     private string HaltTimeLeft()
@@ -433,12 +463,17 @@ public class LordJob_Parade : LordJob_Ritual
                     ticksThisRotation = 0;
                 }
 
-                //Handling all events inside the lordjob rather then mixing back and forth between quest and here. Just easier to put it in one spot.
-                if (ticksPassed == raidSpawn) SpawnRaid();
-                if (ticksPassed == bombSpawn) SpawnBomb();
-                if (ticksPassed == plotTick) GameComponent_Conspiracy.Instance?.TryBeginPlot(this);
+                FireEvents();
             }
         }
+    }
+
+    //Handling all events inside the lordjob rather then mixing back and forth between quest and here. Just easier to put it in one spot.
+    private void FireEvents()
+    {
+        if (ticksPassed == raidSpawn) SpawnRaid();
+        if (ticksPassed == bombSpawn) SpawnBomb();
+        if (ticksPassed == plotTick) GameComponent_Conspiracy.Instance?.TryBeginPlot(this);
     }
 
     //Says who has just been drafted or that the stellarch has gone, counts each tick the procession waits once, however

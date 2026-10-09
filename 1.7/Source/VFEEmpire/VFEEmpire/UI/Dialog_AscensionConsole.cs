@@ -57,9 +57,72 @@ public class Dialog_AscensionConsole : Window_Dev
             DoDelegations(quest, width, ref y);
         }
 
+        DoParade(width, ref y);
         DoOnTheMap(width, ref y);
         Widgets.EndScrollView();
         viewHeight = y;
+    }
+
+    //The parade's own clock runs only while it is under way: its deserter raid, its bombs and the Brutus's plot
+    private static void DoParade(float width, ref float y)
+    {
+        var parade = Find.CurrentMap?.lordManager.lords.Select(lord => lord.LordJob).OfType<LordJob_Parade>().FirstOrDefault();
+        var conspiracy = GameComponent_Conspiracy.Instance;
+        var plot = conspiracy?.plot;
+        if (parade == null && plot == null) return;
+        DoHeader("Parade", width, ref y);
+        var x = 0f;
+        var buttons = false;
+        if (parade != null && !parade.paradeStarted) DoLabel("The nobles have landed; the parade has not started.", width, ref y);
+        else if (parade is { paradeFinished: false })
+        {
+            var elapsed = parade.Elapsed;
+            string In(int tick) => (tick - elapsed).ToStringTicksToPeriod();
+            var raid = LordJob_Parade.RaidTick > elapsed ? "the deserter raid comes in " + In(LordJob_Parade.RaidTick) : "the deserter raid has come";
+            var bombs = LordJob_Parade.BombTick > elapsed ? "the bombs are planted in " + In(LordJob_Parade.BombTick) : "the bombs are planted";
+            var plotHour = plot != null ? "the plot has begun"
+                : parade.PlotTick < 0 ? "the raid sets the plot's hour"
+                : parade.PlotTick > elapsed ? "the plot begins in " + In(parade.PlotTick)
+                : "the plot's hour has passed";
+            DoLabel("Under way, " + elapsed.ToStringTicksToPeriod() + " of " + LordJob_Parade.duration.ToStringTicksToPeriod() + " in: "
+                    + raid + ", " + bombs + ", and " + plotHour + ".", width, ref y);
+            if (elapsed < LordJob_Parade.RaidTick)
+            {
+                buttons = true;
+                if (DoButton("Raid now", ref x, y)) parade.DebugSkipTo(LordJob_Parade.RaidTick);
+            }
+
+            if (elapsed < LordJob_Parade.BombTick)
+            {
+                buttons = true;
+                if (DoButton("Bombs now", ref x, y)) parade.DebugSkipTo(LordJob_Parade.BombTick);
+            }
+
+            if (plot == null && conspiracy != null)
+            {
+                buttons = true;
+                if (DoButton("Plot now", ref x, y) && !conspiracy.TryBeginPlot(parade))
+                    Messages.Message("No plot began: violent quests are off, no colonist can turn, or this stellarch has been betrayed before.",
+                        MessageTypeDefOf.RejectInput, false);
+            }
+        }
+        else if (parade != null) DoLabel("Over.", width, ref y);
+
+        if (plot != null)
+        {
+            if (buttons) y += LineHeight + Gap;
+            buttons = false;
+            x = 0f;
+            DoLabel("The Brutus: " + (plot.brutus?.LabelShortCap ?? "gone") + (plot.allies.Count > 0 ? ", with " + Names(plot.allies) : ", alone") + ", "
+                    + (plot.decisionPending ? "and her death waits on an answer" : plot.striking ? "striking" : "closing in on her") + ".", width, ref y);
+            if (!plot.striking && !plot.decisionPending)
+            {
+                buttons = true;
+                if (DoButton("Strike now", ref x, y)) conspiracy.DebugStrike();
+            }
+        }
+
+        if (buttons) y += LineHeight + Gap;
     }
 
     private static void DoAscension(Quest quest, float width, ref float y)
