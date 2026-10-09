@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!-- A truce after the Brutus kills the stellarch: colonists who loved her are sorry, those who despised her are glad -->
+  <ThoughtDef>
+    <defName>VFEE_StellarchTruce</defName>
+    <durationDays>60</durationDays>
+    <stackLimit>1</stackLimit>
+    <stages>
+      <li>
+        <label>truce with the stellarch's killers</label>
+        <description>Our stellarch was murdered, and the killers walk among us.</description>
+        <baseMoodEffect>-10</baseMoodEffect>
+      </li>
+      <li>
+        <label>sic semper tyrannis</label>
+        <description>The stellarch is dead, and I am not sorry.</description>
+        <baseMoodEffect>10</baseMoodEffect>
+      </li>
+    </stages>
+  </ThoughtDef>
+
+  <!-- After a truce, for as long as the Brutus holds the colony's highest title -->
+  <ThoughtDef>
+    <defName>VFEE_StellarchsKiller</defName>
+    <thoughtClass>Thought_SituationalSocial</thoughtClass>
+    <workerClass>VFEEmpire.ThoughtWorker_StellarchsKiller</workerClass>
+    <validWhileDespawned>true</validWhileDespawned>
+    <stages>
+      <li>
+        <label>betrayed the stellarch</label>
+        <baseOpinionOffset>-20</baseOpinionOffset>
+      </li>
+    </stages>
+  </ThoughtDef>
+
+</Defs>

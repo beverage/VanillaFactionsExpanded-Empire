@@ -33,7 +33,6 @@
 	<VFEE.ArtExhibit.Description>An art expedition to only be attended by those with a royal title, to view your galley and gossip with eachother.</VFEE.ArtExhibit.Description>
 	<VFEE.ArtExhibit.ChooseParticipants>Participants</VFEE.ArtExhibit.ChooseParticipants>
 	<VFEE.Parade.Begin>Host parade</VFEE.Parade.Begin>
-	<VFEE.Parade.Murder>Driven by jealousy, {0} is attempting to murder the stellarch!</VFEE.Parade.Murder>
 	<VFEE.Parade.Label>parade</VFEE.Parade.Label>
 	<VFEE.Parade.Leave.label>Leave parade</VFEE.Parade.Leave.label>
 	<VFEE.Parade.Leave.Desc>This pawn will leave the parade and will not be able to rejoin the festivities later.</VFEE.Parade.Leave.Desc>
@@ -100,6 +99,41 @@
 	<VFEE.Delegation.Cell>{NAMES} came with the delegation from {FACTION_name}, but are deserters in disguise, and have drawn smuggled weapons on {STELLARCH_nameDef} together!</VFEE.Delegation.Cell>
 	<VFEE.Delegation.CellExposedLabel>{COUNT} deserters exposed</VFEE.Delegation.CellExposedLabel>
 	<VFEE.Delegation.CellExposed>You were right, and that deserter was not alone: {NAMES} came with the delegation from {FACTION_name} in disguise. Exposed, they have drawn smuggled weapons and are all going for {STELLARCH_nameDef}!</VFEE.Delegation.CellExposed>
+	<VFEE.Conspiracy.LeftPost>{PAWN_nameDef} has left {PAWN_possessive} post, concerned for {STELLARCH_nameDef}.</VFEE.Conspiracy.LeftPost>
+	<VFEE.Conspiracy.Concerned>Concerned for {STELLARCH_nameDef}</VFEE.Conspiracy.Concerned>
+	<VFEE.Conspiracy.StrikeLabel>Treason: {BRUTUS_nameDef}</VFEE.Conspiracy.StrikeLabel>
+	<VFEE.Conspiracy.Strike>{BRUTUS_nameFull} has turned on {STELLARCH_nameDef}!</VFEE.Conspiracy.Strike>
+	<VFEE.Conspiracy.StrikeWithAllies>{BRUTUS_nameFull} has turned on {STELLARCH_nameDef}, with {ALLIES} at {BRUTUS_possessive} side!</VFEE.Conspiracy.StrikeWithAllies>
+	<VFEE.Conspiracy.StrikeGuards>They are going for {STELLARCH_possessive} guards first, then for {STELLARCH_objective}.</VFEE.Conspiracy.StrikeGuards>
+	<VFEE.Conspiracy.StrikeGuardsAlone>{BRUTUS_nameDef} is going for {STELLARCH_possessive} guards first, then for {STELLARCH_objective}.</VFEE.Conspiracy.StrikeGuardsAlone>
+	<VFEE.Conspiracy.StrikeRules>The deserters will leave the plotters alone. If {BRUTUS_nameDef} falls before {STELLARCH_nameDef} does, the plot fails and the others surrender. If {STELLARCH_nameDef} dies, what happens next is your decision.</VFEE.Conspiracy.StrikeRules>
+	<VFEE.Conspiracy.StrikeRulesAlone>The deserters will leave {BRUTUS_objective} alone. If {BRUTUS_nameDef} falls before {STELLARCH_nameDef} does, the plot fails. If {STELLARCH_nameDef} dies, what happens next is your decision.</VFEE.Conspiracy.StrikeRulesAlone>
+	<VFEE.Conspiracy.FoiledLabel>Plot foiled</VFEE.Conspiracy.FoiledLabel>
+	<VFEE.Conspiracy.FoiledBrutusStopped>{BRUTUS_nameDef} has been stopped, and the plot against {STELLARCH_nameDef} has failed.</VFEE.Conspiracy.FoiledBrutusStopped>
+	<VFEE.Conspiracy.FoiledOutOfReach>{STELLARCH_nameDef} is out of the plotters' reach, and their plot has failed.</VFEE.Conspiracy.FoiledOutOfReach>
+	<VFEE.Conspiracy.FoiledSurrendered>The others have dropped their weapons and surrendered: {ALLIES}.</VFEE.Conspiracy.FoiledSurrendered>
+	<VFEE.Conspiracy.FoiledEveryoneSurrendered>The plotters have dropped their weapons and surrendered: {ALLIES}.</VFEE.Conspiracy.FoiledEveryoneSurrendered>
+	<VFEE.Conspiracy.GuiltyForGood>Every plotter stays guilty for good, and can be executed at any time.</VFEE.Conspiracy.GuiltyForGood>
+	<VFEE.Conspiracy.DecisionTitle>{STELLARCH_nameDef} is dead</VFEE.Conspiracy.DecisionTitle>
+	<VFEE.Conspiracy.Decision>{STELLARCH_nameFull} is dead, and the ascension has failed. The plot led by {BRUTUS_nameFull} has won, and how it ends is your decision.\n\nTraitors: {BRUTUS_nameDef} and the other plotters go over to the deserters, to be hunted down. They will go for the nobles still here as well.\n\nThe deal: the Empire accepts {BRUTUS_nameDef} as {STELLARCH_possessive} successor, with {STELLARCH_possessive} honor at once and {STELLARCH_possessive} title at a bestowing ceremony. Every other adult colonist here stays loyal to {STELLARCH_objective}, goes over to the deserters and fights the plotters to the last. Children and slaves hide until the fighting is over.\n\nTruce: everyone stands down and stays, and {STELLARCH_possessive} title goes to {STELLARCH_possessive} heir. For 60 days, colonists who loved {STELLARCH_objective} will be unhappy, and those who despised {STELLARCH_objective} glad. If a colonist kills one of the plotters, the truce is broken and the rest go over to the deserters.</VFEE.Conspiracy.Decision>
+	<VFEE.Conspiracy.AnswerTraitors>Traitors</VFEE.Conspiracy.AnswerTraitors>
+	<VFEE.Conspiracy.AnswerDeal>The deal</VFEE.Conspiracy.AnswerDeal>
+	<VFEE.Conspiracy.AnswerTruce>Truce</VFEE.Conspiracy.AnswerTruce>
+	<VFEE.Conspiracy.BrutusDead>{BRUTUS_nameDef} is dead.</VFEE.Conspiracy.BrutusDead>
+	<VFEE.Conspiracy.TraitorsLabel>Traitors</VFEE.Conspiracy.TraitorsLabel>
+	<VFEE.Conspiracy.Traitors>The plotters have gone over to the deserters: {CONSPIRATORS}. They will fight to the last, and go for the nobles still here as well.</VFEE.Conspiracy.Traitors>
+	<VFEE.Conspiracy.TraitorsAlone>{BRUTUS_nameDef} has gone over to the deserters, and will fight to the last, going for the nobles still here as well.</VFEE.Conspiracy.TraitorsAlone>
+	<VFEE.Conspiracy.DealLabel>The deal</VFEE.Conspiracy.DealLabel>
+	<VFEE.Conspiracy.Deal>The Empire accepts {BRUTUS_nameDef} as {STELLARCH_nameDef}'s successor. The colonists who stayed loyal to {STELLARCH_objective} have gone over to the deserters, and will fight the plotters to the last: {LOYALISTS}.</VFEE.Conspiracy.Deal>
+	<VFEE.Conspiracy.DealNoLoyalists>The Empire accepts {BRUTUS_nameDef} as {STELLARCH_nameDef}'s successor, and nobody here stayed loyal to {STELLARCH_objective}.</VFEE.Conspiracy.DealNoLoyalists>
+	<VFEE.Conspiracy.DealHiding>The children and slaves are hiding until the fighting is over.</VFEE.Conspiracy.DealHiding>
+	<VFEE.Conspiracy.TruceLabel>Truce</VFEE.Conspiracy.TruceLabel>
+	<VFEE.Conspiracy.Truce>Everyone stands down. {STELLARCH_nameDef}'s title passes to {STELLARCH_possessive} heir, and the plotters stay in the colony, guilty for good: {CONSPIRATORS}. If a colonist kills one of them, the truce is broken and the rest go over to the deserters.</VFEE.Conspiracy.Truce>
+	<VFEE.Conspiracy.TruceAlone>Everyone stands down. {STELLARCH_nameDef}'s title passes to {STELLARCH_possessive} heir, and {BRUTUS_nameDef} stays in the colony, guilty for good.</VFEE.Conspiracy.TruceAlone>
+	<VFEE.Conspiracy.TruceNoneLeft>Everyone stands down, and {STELLARCH_nameDef}'s title passes to {STELLARCH_possessive} heir. None of the plotters is left alive.</VFEE.Conspiracy.TruceNoneLeft>
+	<VFEE.Conspiracy.TruceBrokenLabel>Truce broken</VFEE.Conspiracy.TruceBrokenLabel>
+	<VFEE.Conspiracy.TruceBroken>{KILLER_nameDef} has killed {VICTIM_nameDef}, and the truce after {STELLARCH}'s death is broken. The other plotters have gone over to the deserters: {CONSPIRATORS}.</VFEE.Conspiracy.TruceBroken>
+	<VFEE.Conspiracy.FightOver>The fighting is over, and the children and slaves who sat it out are coming out of hiding.</VFEE.Conspiracy.FightOver>
 	<VFEE.DefuseBomb>Defuse bomb</VFEE.DefuseBomb>
 	<VFEE.AssassinationSuccess>Deserters are leaving as they have eliminated their target.</VFEE.AssassinationSuccess>
 	<VFEE.Discard>Discard</VFEE.Discard>

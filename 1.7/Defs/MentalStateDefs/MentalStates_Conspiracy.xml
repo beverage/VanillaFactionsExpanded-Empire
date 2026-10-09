@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!-- The Brutus's plot: the conspirators leave their posts, then turn on the stellarch and her guards. Only the plot ends either state -->
+  <MentalStateDef>
+    <defName>VFEE_ConspiratorApproach</defName>
+    <stateClass>VFEEmpire.MentalState_ConspiratorApproach</stateClass>
+    <label>concerned</label>
+    <category>Misc</category>
+    <colonistsOnly>true</colonistsOnly>
+    <blockRandomInteraction>true</blockRandomInteraction>
+    <recoverFromCollapsingExhausted>false</recoverFromCollapsingExhausted>
+    <baseInspectLine>Concerned for the stellarch</baseInspectLine>
+  </MentalStateDef>
+
+  <MentalStateDef>
+    <defName>VFEE_ConspiratorStrike</defName>
+    <stateClass>VFEEmpire.MentalState_ConspiratorStrike</stateClass>
+    <label>treason</label>
+    <category>Aggro</category>
+    <colonistsOnly>true</colonistsOnly>
+    <blockRandomInteraction>true</blockRandomInteraction>
+    <recoverFromCollapsingExhausted>false</recoverFromCollapsingExhausted>
+    <nameColor>(0.9,0.2,0.5)</nameColor>
+    <baseInspectLine>Mental state: Treason</baseInspectLine>
+    <allowBeatfire>true</allowBeatfire>
+  </MentalStateDef>
+
+  <!-- If the player makes a deal with the Brutus, the colony's children and slaves sit out its fight -->
+  <MentalStateDef>
+    <defName>VFEE_SittingOutFight</defName>
+    <stateClass>VFEEmpire.MentalState_SittingOutFight</stateClass>
+    <label>sitting out the fight</label>
+    <category>Misc</category>
+    <blockRandomInteraction>true</blockRandomInteraction>
+    <recoverFromCollapsingExhausted>false</recoverFromCollapsingExhausted>
+    <baseInspectLine>Sitting out the fight</baseInspectLine>
+  </MentalStateDef>
+
+</Defs>

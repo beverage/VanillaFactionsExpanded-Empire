@@ -55,6 +55,12 @@ public static class VFEE_DefOf
     public static DutyDef VFEE_AssassinStrike;
     public static HistoryEventDef VFEE_DelegateDenounced;
     public static TraitDef VFEE_Envoy;
+    public static MentalStateDef VFEE_ConspiratorApproach;
+    public static MentalStateDef VFEE_ConspiratorStrike;
+    public static MentalStateDef VFEE_SittingOutFight;
+    public static TraitDef VFEE_Conspirator;
+    public static TraitDef VFEE_Bystander;
+    public static ThoughtDef VFEE_StellarchTruce;
     public static PreceptDef VFEE_BestowHonor;
     public static TerrainDef VFEE_ThickAsh;
     public static TraitDef NaturalMood;

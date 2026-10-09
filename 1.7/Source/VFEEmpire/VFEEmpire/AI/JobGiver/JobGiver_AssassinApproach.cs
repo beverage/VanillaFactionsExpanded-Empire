@@ -38,8 +38,9 @@ public class JobGiver_AssassinApproach : ThinkNode_JobGiver
     }
 
     //Vanilla's FollowClose is made for following someone on the move: with the leader standing still it settles for any
-    //walkable cell near it, the far side of a wall included
-    private static Job KeepToLeader(Pawn pawn, Pawn leader)
+    //walkable cell near it, the far side of a wall included. The Brutus's allies keep to the Brutus the same way
+    //(JobGiver_ConspiratorApproach), at a jog
+    internal static Job KeepToLeader(Pawn pawn, Pawn leader, LocomotionUrgency urgency = LocomotionUrgency.Walk)
     {
         var map = leader.Map;
         var room = leader.GetRoom();
@@ -49,7 +50,7 @@ public class JobGiver_AssassinApproach : ThinkNode_JobGiver
             spot = leader.Position;
         if (!pawn.CanReach(spot, PathEndMode.OnCell, Danger.Deadly)) return null;
         var job = JobMaker.MakeJob(JobDefOf.Goto, spot);
-        job.locomotionUrgency = LocomotionUrgency.Walk;
+        job.locomotionUrgency = urgency;
         job.expiryInterval = FollowExpiry;
         job.checkOverrideOnExpire = true;
         return job;

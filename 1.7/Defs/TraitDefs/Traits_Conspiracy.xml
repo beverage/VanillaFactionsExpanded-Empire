@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!-- The conspirators while the plot runs: at peace with the deserters, and psychically deaf so a psychic lance cannot end the plot -->
+  <TraitDef>
+    <defName>VFEE_Conspirator</defName>
+    <commonality>0</commonality>
+    <canBeSuppressed>false</canBeSuppressed>
+    <disableHostilityFromFaction>VFEE_Deserters</disableHostilityFromFaction>
+    <degreeDatas>
+      <li>
+        <label>in league</label>
+        <description>{PAWN_nameDef} has an understanding with the deserters. They leave {PAWN_objective} alone, and {PAWN_pronoun} leaves them alone. They also gave {PAWN_objective} a psychic dampener, which leaves {PAWN_objective} psychically deaf until the plot is over.</description>
+        <statFactors>
+          <PsychicSensitivity>0</PsychicSensitivity>
+        </statFactors>
+      </li>
+    </degreeDatas>
+  </TraitDef>
+
+  <!-- After a deal with the Brutus, the children and slaves who sit out the fight carry this until it ends -->
+  <TraitDef>
+    <defName>VFEE_Bystander</defName>
+    <commonality>0</commonality>
+    <canBeSuppressed>false</canBeSuppressed>
+    <disableHostilityFromFaction>VFEE_Deserters</disableHostilityFromFaction>
+    <degreeDatas>
+      <li>
+        <label>bystander</label>
+        <description>{PAWN_nameDef} is sitting out the colony's fight, and the deserters leave {PAWN_objective} alone.</description>
+      </li>
+    </degreeDatas>
+  </TraitDef>
+
+</Defs>
