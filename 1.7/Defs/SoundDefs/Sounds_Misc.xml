@@ -11,8 +11,9 @@
                 <clipPath>Bomb/BombBeep</clipPath>
               </li>
             </grains>
-            <volumeRange>10~15</volumeRange>
-            <distRange>0~80</distRange>
+            <!-- The bombs' warning beep: a quiet clip, so a high volume, and a range that reaches a camera zoomed all the way out -->
+            <volumeRange>70~80</volumeRange>
+            <distRange>25~110</distRange>
           </li>
         </subSounds>
     </SoundDef>

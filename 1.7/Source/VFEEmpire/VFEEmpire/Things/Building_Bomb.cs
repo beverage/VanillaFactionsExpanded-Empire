@@ -18,8 +18,12 @@ public class Building_Bomb : Building
     private int ticksLit;
     private int ticksTillBeep = 1;
 
+    //Drawn above everything else on the map, its light included, at the height vanilla gives its overlay icons, which is above a
+    //dark room's shadow too. The bomb waits in a free cell of one of the colony's most valuable rooms, and furniture can draw
+    //well past its own cells: a 2x1 wardrobe from a storage mod draws 4x4, and hid a bomb in the cell behind it entirely
     protected override void DrawAt(Vector3 drawLoc, bool flip = false)
     {
+        drawLoc.y = AltitudeLayer.MetaOverlays.AltitudeFor();
         base.DrawAt(drawLoc, flip);
         if (ticksLit > 0)
             Graphics.DrawMesh(MeshPool.plane10, Matrix4x4.TRS(drawLoc + Vector3.one * 0.125f, Quaternion.AngleAxis(0f, Vector3.up), Vector3.one), LightMat, 0);

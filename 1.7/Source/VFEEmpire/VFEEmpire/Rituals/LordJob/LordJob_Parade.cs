@@ -519,34 +519,62 @@ public class LordJob_Parade : LordJob_Ritual
         QuestUtility.SendQuestTargetSignals(lord.questTags, "SpawnRaid", lord.Named("SUBJECT"));
     }
 
+    //Four bombs in the colony's high-value rooms and one by the shuttle, each a different colour of the deserters' bomb:
+    //double-clicking a thing selects every thing of the same def on screen, so finding one must not show the rest. The four
+    //are drawn from the ten most valuable rooms, so the player knows where to look but not which of them were hit; the
+    //parade's own rooms compete like any other
+    private const int RoomBombs = 4;
+    private const int BombableRooms = 10;
+
     private void SpawnBomb()
     {
-        var bombsToPlace = 4;
         var deserter = GameComponent_Empire.Instance.Deserter;
-        for (var i = stage; i < stops.Count; i++)
+        var kinds = new List<ThingDef>
+                { VFEE_DefOf.VFEE_Bomb, VFEE_DefOf.VFEE_BombRed, VFEE_DefOf.VFEE_BombBlue, VFEE_DefOf.VFEE_BombGreen, VFEE_DefOf.VFEE_BombYellow }
+           .InRandomOrder().ToList();
+        var planted = 0;
+        var ranked = Map.regionGrid.AllRooms.Where(room => room.ProperRoom && !room.PsychologicallyOutdoors && !room.Fogged)
+           .OrderByDescending(RoomValue).ToList();
+        //The rest, most valuable first, only for when one of the ten has no free cell
+        foreach (var room in ranked.Take(BombableRooms).InRandomOrder().Concat(ranked.Skip(BombableRooms)))
         {
-            if (CellFinder.TryFindRandomCellNear(stops[i], Map, 10, c => { return c.GetRoom(Map) == stops[i].GetRoom(Map) && c.GetEdifice(Map) == null; },
-                    out var placeCell))
-            {
-                bombsToPlace--;
-                var bomb = ThingMaker.MakeThing(VFEE_DefOf.VFEE_Bomb) as Building_Bomb;
-                bomb.SetFaction(deserter);
-                bomb.ticksLeft = duration - ticksPassed - 100; //Explode just before parade ends
-                GenSpawn.Spawn(bomb, placeCell, Map);
-            }
-
-            if (bombsToPlace == 0) break;
+            if (planted >= RoomBombs) break;
+            if (room.Cells.Where(BombCell).TryRandomElement(out var cell))
+                PlantBomb(kinds[planted++], deserter, cell, duration - ticksPassed - 100); //Explode just before parade ends
         }
 
-        //spawn extra on shuttle
-        if (CellFinder.TryFindRandomCellNear(shuttle.Position, Map, 10, c => { return c.GetEdifice(Map) == null; }, out var shuttleCell))
-        {
-            bombsToPlace--;
-            var bomb = ThingMaker.MakeThing(VFEE_DefOf.VFEE_Bomb) as Building_Bomb;
-            bomb.SetFaction(deserter);
-            bomb.ticksLeft = duration - ticksPassed - 500; //Explode just before parade ends
-            GenSpawn.Spawn(bomb, shuttleCell, Map);
-        }
+        if (CellFinder.TryFindRandomCellNear(shuttle.Position, Map, 10, BombCell, out var shuttleCell))
+            PlantBomb(kinds[planted++], deserter, shuttleCell, duration - ticksPassed - 500);
+
+        //Their beeping used to be the only warning. The letter says how many there are and that some are in the valuable rooms,
+        //and leaves the one by the shuttle to be found. It points at none of them, since pointing would show them all at once
+        if (planted > 0)
+            Find.LetterStack.ReceiveLetter("VFEE.Parade.BombsLabel".Translate(),
+                "VFEE.Parade.Bombs".Translate(planted.Named("COUNT"), (duration - ticksPassed).ToStringTicksToPeriod().Named("TIME")),
+                LetterDefOf.ThreatBig);
+    }
+
+    //Everything in the room: its buildings, its floors and what is stored there, so a vault counts by its gold, a gallery by
+    //its art and a workshop by its benches. Vanilla's room wealth leaves out stored items. People are not property
+    private static float RoomValue(Room room)
+    {
+        var value = 0f;
+        foreach (var cell in room.Cells) value += cell.GetTerrain(room.Map).GetStatValueAbstract(StatDefOf.MarketValue);
+        foreach (var thing in room.ContainedAndAdjacentThings)
+            if (thing is not Pawn && thing.def.category is ThingCategory.Building or ThingCategory.Item or ThingCategory.Plant)
+                value += thing.MarketValue * thing.stackCount;
+        return value;
+    }
+
+    //A free cell: nothing built there, and no item for the bomb to land on
+    private bool BombCell(IntVec3 cell) => cell.Standable(Map) && cell.GetEdifice(Map) == null && cell.GetFirstItem(Map) == null && !cell.Fogged(Map);
+
+    private void PlantBomb(ThingDef def, Faction faction, IntVec3 cell, int ticksLeft)
+    {
+        var bomb = (Building_Bomb)ThingMaker.MakeThing(def);
+        bomb.SetFaction(faction);
+        bomb.ticksLeft = ticksLeft;
+        GenSpawn.Spawn(bomb, cell, Map);
     }
 
     private void Murderers()
