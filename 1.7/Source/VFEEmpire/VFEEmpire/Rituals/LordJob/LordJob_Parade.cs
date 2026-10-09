@@ -15,7 +15,6 @@ public class LordJob_Parade : LordJob_Ritual
     public static readonly int duration = 30000;
     private static readonly int raidSpawn = 7500;
     private static readonly int bombSpawn = 12500;
-    private static readonly int murders = 22500;
     public static readonly string MemoCeremonyStarted = "CeremonyStarted";
     private static readonly Texture2D icon = ContentFinder<Texture2D>.Get("UI/Rituals/BestowingParade");
     private readonly List<ParadeEffecter> effecters = new();
@@ -28,6 +27,9 @@ public class LordJob_Parade : LordJob_Ritual
     //Everyone given the guard role, never removed. Notify_PawnLost takes a fallen guard out of guards before the trigger
     //for a violent loss runs, so Trigger_ParadeLostViolently checks this list: a guard's own loss never fails the parade
     public List<Pawn> assignedGuards = new();
+
+    //When the Brutus's plot begins, in parade ticks: set when the deserter raid comes, an hour to three after it
+    private int plotTick = -1;
 
 
     //Not Exposed
@@ -161,6 +163,7 @@ public class LordJob_Parade : LordJob_Ritual
         Scribe_Collections.Look(ref stops, "stops", LookMode.Value);
         Scribe_Values.Look(ref haltedTicks, "haltedTicks");
         Scribe_Collections.Look(ref assignedGuards, "assignedGuards", LookMode.Reference);
+        Scribe_Values.Look(ref plotTick, "plotTick", -1);
         if (Scribe.mode == LoadSaveMode.PostLoadInit)
         {
             //A save without the guards' list loads it as null, and the parade reads it unchecked every tick
@@ -179,8 +182,9 @@ public class LordJob_Parade : LordJob_Ritual
     public bool Halted => halted && paradeStarted && !paradeFinished;
 
     //Off the parade's map, or inside something on it, a casket or a shuttle: despawning takes the drafter but leaves the pawn
-    //among the lord's pawns, and nothing else in the parade notices
-    private bool StellarchAway => stellarch.Map != Map;
+    //among the lord's pawns, and nothing else in the parade notices. Carried, downed in the Brutus's plot, the stellarch is not
+    //away, as a stellarch lying where downed is not
+    private bool StellarchAway => stellarch.Map != Map && stellarch.ParentHolder is not Pawn_CarryTracker;
 
     //Vanilla's periods round anything over an hour to whole hours, so 1.6 hours left would read 2: over an hour this gives
     //tenths, and under one vanilla's own tenths and seconds
@@ -275,8 +279,9 @@ public class LordJob_Parade : LordJob_Ritual
         var transition_ParadeInterupted = new Transition(paradeToil, exitToil);
         transition_ParadeInterupted.AddPreAction(removeColonists);
         transition_ParadeInterupted.AddPreAction(new TransitionAction_Custom(() => { StopParade("CeremonyFailed"); }));
-        transition_ParadeInterupted.AddTrigger(
-            new Trigger_TickCondition(() => { return shuttle.Destroyed || stellarch.InMentalState || stellarch.Downed; }, 60));
+        //While the Brutus's plot is under way, the stellarch going down does not end the parade: the plot plays out first
+        transition_ParadeInterupted.AddTrigger(new Trigger_TickCondition(() => shuttle.Destroyed || stellarch.InMentalState
+         || ((stellarch.Downed || !lord.ownedPawns.Contains(stellarch)) && GameComponent_Conspiracy.Instance?.PlotUnderWayFor(stellarch) != true), 60));
         //transition_ParadeInterupted.AddTrigger(new Trigger_PawnHarmed()); taking out pawn harmed as instant fail as can be triggered super easily
         transition_ParadeInterupted.AddTrigger(new Trigger_ParadeLostViolently());
         transition_ParadeInterupted.AddTrigger(new Trigger_Signal(questEndedSignal));
@@ -432,7 +437,7 @@ public class LordJob_Parade : LordJob_Ritual
                 //Handling all events inside the lordjob rather then mixing back and forth between quest and here. Just easier to put it in one spot.
                 if (ticksPassed == raidSpawn) SpawnRaid();
                 if (ticksPassed == bombSpawn) SpawnBomb();
-                if (ticksPassed == murders) Murderers();
+                if (ticksPassed == plotTick) GameComponent_Conspiracy.Instance?.TryBeginPlot(this);
             }
         }
     }
@@ -518,6 +523,8 @@ public class LordJob_Parade : LordJob_Ritual
     private void SpawnRaid()
     {
         QuestUtility.SendQuestTargetSignals(lord.questTags, "SpawnRaid", lord.Named("SUBJECT"));
+        //The raid is the Brutus's cover
+        plotTick = ticksPassed + Rand.RangeInclusive(GenDate.TicksPerHour, 3 * GenDate.TicksPerHour);
     }
 
     //Four bombs in the colony's high-value rooms and one by the shuttle, each a different colour of the deserters' bomb:
@@ -578,35 +585,6 @@ public class LordJob_Parade : LordJob_Ritual
         GenSpawn.Spawn(bomb, cell, Map);
     }
 
-    private void Murderers()
-    {
-        var murderers = new List<Pawn>();
-        //Rivals first, other nobles, then random colonists
-        foreach (var pawn in Map.mapPawns.FreeColonistsSpawned)
-            if (pawn.relations.OpinionOf(stellarch) < Pawn_RelationsTracker.RivalOpinionThreshold)
-                murderers.Add(pawn);
-        if (murderers.Count < 2)
-            foreach (var pawn in nobles)
-                if (pawn.IsColonist && pawn.relations.OpinionOf(stellarch) < 0)
-                    murderers.Add(pawn);
-        if (murderers.Count < 2)
-            foreach (var pawn in Map.mapPawns.FreeColonistsSpawned)
-                if (pawn.IsColonist && pawn.relations.OpinionOf(stellarch) < 0)
-                    murderers.Add(pawn);
-        var stateDef = DefDatabase<MentalStateDef>.GetNamed("MurderousRage");
-        foreach (var murderer in murderers)
-            if (murderer.mindState.mentalStateHandler.TryStartMentalState(stateDef, "VFEE.Parade.Murder".Translate(murderer.NameFullColored),
-                    transitionSilently: true))
-            {
-                var state = murderer.mindState.mentalStateHandler.CurState as MentalState_MurderousRage;
-                state.target = stellarch;
-                murderer.jobs.CheckForJobOverride();
-            }
-
-        foreach (var pawn in guards.ListFullCopy())
-            ReconsiderJob(pawn);
-    }
-
     public void RoomSwap()
     {
         stage++;
@@ -663,10 +641,12 @@ public class LordJob_Parade : LordJob_Ritual
     //Vanilla lets a ritual member leave of their own accord when a need or a wound pulls them away. The parade
     //has nobody to lead it without the stellarch, so she cannot leave it that way while it lasts. Once it is over
     //the stellarch can, to be tended before boarding. Drafting the stellarch or a guard keeps them in it too, on the allowance
-    //CountHaltedTime keeps.
+    //CountHaltedTime keeps. Downed with the Brutus's plot under way, the stellarch stays in it until the plot is over, and
+    //leads it on if standing again by then.
     public override bool ShouldRemovePawn(Pawn p, PawnLostCondition reason)
     {
         if (p == stellarch && reason == PawnLostCondition.LeftVoluntarily && !paradeFinished) return false;
+        if (p == stellarch && reason == PawnLostCondition.Incapped && GameComponent_Conspiracy.Instance?.PlotUnderWayFor(p) == true) return false;
         return reason != PawnLostCondition.Drafted || !DraftableInParade(p);
     }
 

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Patch>
+
+  <!-- Word of serenity ends any mental state but a jailbreak, and unlike the other words it carries no psychic flag, so
+       the plotters' deafness does not stop it: one touch on the Brutus would end the plot, during the approach as well as
+       the strike. The plot's two states join the jailbreak among the states it cannot end -->
+  <Operation Class="PatchOperationAdd">
+    <xpath>Defs/AbilityDef[defName="WordOfSerenity"]/comps/li[@Class="CompProperties_AbilityStopMentalState"]/exceptions</xpath>
+    <value>
+      <li>VFEE_ConspiratorApproach</li>
+      <li>VFEE_ConspiratorStrike</li>
+    </value>
+  </Operation>
+
+  <!-- A ghoul is offered only the float menu options its mutant def lists, so a drafted ghoul could not be sent at a
+       striking plotter with the attack order every other drafted pawn has. Only with Anomaly -->
+  <Operation Class="PatchOperationConditional">
+    <xpath>Defs/MutantDef[defName="Ghoul"]/whitelistedFloatMenuProviders</xpath>
+    <match Class="PatchOperationAdd">
+      <xpath>Defs/MutantDef[defName="Ghoul"]/whitelistedFloatMenuProviders</xpath>
+      <value>
+        <li>VFEEmpire.FloatMenuOptionProvider_AttackConspirator</li>
+      </value>
+    </match>
+  </Operation>
+
+</Patch>
