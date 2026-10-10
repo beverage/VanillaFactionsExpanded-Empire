@@ -40,8 +40,9 @@ public static class DelegationUtility
     //and only an upgrade on what the deserter came carrying, which it throws down. Biocoded to them, so it is no loot. They
     //keep the clothes they came in. Any other weapon they carry, anything they could wield, is thrown down too, so they
     //fight with their best: a sidearms mod would otherwise switch back to one of those the moment they closed to melee. What
-    //they throw down is forbidden, as a downed pawn's gear is, so nobody runs into the fight to haul it.
-    public static void DrawSmuggledWeapon(Pawn pawn)
+    //they throw down is forbidden, as a downed pawn's gear is, so nobody runs into the fight to haul it. The weighting also
+    //leans toward what gets through the armor of the one they came for (AscensionCounters.DamageThrough).
+    public static void DrawSmuggledWeapon(Pawn pawn, Pawn mark)
     {
         var kit = VFEE_DefOf.VFEE_Deserter;
         if (kit?.weaponTags == null || pawn.equipment == null || pawn.inventory == null || !pawn.RaceProps.ToolUser || !pawn.Spawned
@@ -54,7 +55,7 @@ public static class DelegationUtility
             && (!pair.thing.IsRangedWeapon || !pawn.WorkTagIsDisabled(WorkTags.Shooting))
             && (pair.stuff == null || pair.stuff.stuffProps.allowedInStuffGeneration)
             && Rand.Chance(pair.thing.generateAllowChance)).ToList();
-        if (candidates.TryRandomElementByWeight(pair => pair.Commonality * pair.Price, out var pick))
+        if (candidates.TryRandomElementByWeight(pair => pair.Commonality * pair.Price * AscensionCounters.DamageThrough(mark, pair.thing), out var pick))
         {
             var weapon = (ThingWithComps)ThingMaker.MakeThing(pick.thing, pick.stuff);
             PawnGenerator.PostProcessGeneratedGear(weapon, pawn);

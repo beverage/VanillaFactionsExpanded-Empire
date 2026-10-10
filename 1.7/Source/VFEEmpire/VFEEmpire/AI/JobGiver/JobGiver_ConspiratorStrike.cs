@@ -7,7 +7,9 @@ namespace VFEEmpire;
 //Cut down the stellarch's guards, spread across them, then her, though on Losing is fun the Brutus goes straight for her
 //(GameComponent_Conspiracy.StrikeTargetFor). Shoot when there is a clear shot, move for one when there is not, and close in
 //to fight hand to hand when there is nowhere to shoot from. A conspirator that fights best hand to hand does so whatever
-//it carries, unless there is no way to its target. Only she is finished off once down.
+//it carries, unless there is no way to its target. Only she is finished off once down. A conspirator the deserters gave an
+//EMP grenade throws it first, the moment a blast would catch what of hers fights the plot, and a Deathless stellarch down is
+//executed rather than hit (AscensionCounters).
 public class JobGiver_ConspiratorStrike : ThinkNode_JobGiver
 {
     protected override Job TryGiveJob(Pawn pawn)
@@ -19,6 +21,9 @@ public class JobGiver_ConspiratorStrike : ThinkNode_JobGiver
         var spot = target.SpawnedParentOrMe;
         if (spot == null || spot.Map != pawn.Map) return null;
         var finish = target == conspiracy.plot.stellarch;
+        var counter = AscensionCounters.ThrowJob(pawn, conspiracy.plot.stellarch, conspiracy.plot.Conspirators, plot: true)
+                   ?? (finish ? AscensionCounters.ExecuteJob(pawn, target) : null);
+        if (counter != null) return counter;
         var verb = pawn.TryGetAttackVerb(spot);
         var handToHand = conspiracy.FightsHandToHand(pawn) && pawn.CanReach(spot, PathEndMode.Touch, Danger.Deadly, true);
         if (verb != null && !verb.IsMeleeAttack && !handToHand)

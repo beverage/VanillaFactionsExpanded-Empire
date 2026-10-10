@@ -10,19 +10,24 @@ public enum AscensionDifficulty
     Normal
 }
 
-//How dangerous an ascension is, asked as its countdown begins. Losing is fun is the ascension as built. Normal hides half as
-//many deserters among the delegations, has the parade's deserters plant three bombs instead of five, leaves the Brutus one
-//ally at most, sends the Brutus for her guards first with the others rather than straight for her, and lets everyone's
-//lower opinion of a Brutus after a truce lapse after a year rather than last for as long as the Brutus stays. The window
-//waits for an answer, and comes back after a load until it has one
+//How dangerous an ascension is, asked as its countdown begins. Losing is fun is the ascension as built. Normal hides half
+//as many deserters among the delegations, has the parade's deserters plant three bombs instead of five, leaves the Brutus
+//one ally at most, sends the Brutus for her guards first with the others rather than straight for her, lets everyone's
+//lower opinion of a Brutus after a truce lapse after a year rather than last for as long as the Brutus stays, and gives a
+//cell and the plot one smuggled EMP grenade each for what guards her, where a cell would get one for each blast it takes
+//and the plot a second against more than four war mechs. The window waits for an answer, and comes back after a load until
+//it has one
 public class QuestPart_AscensionDifficulty : QuestPartActivable
 {
-    //What Normal changes: QuestPart_Delegations.TrySend, LordJob_Parade.SpawnBomb, GameComponent_Conspiracy.TryBeginPlot,
-    //GameComponent_Conspiracy.StrikeTargetFor and GameComponent_Conspiracy.Truce
+    //What Normal changes: QuestPart_Delegations.TrySend, LordJob_Parade.SpawnBomb, GameComponent_Conspiracy.AlliesWanted,
+    //GameComponent_Conspiracy.StrikeTargetFor, GameComponent_Conspiracy.Truce, AscensionCounters.CellGrenades and
+    //AscensionCounters.PlotGrenades. The parade's deserter raid is the same on both (QuestPart_DeserterRaid)
     public const float NormalPointsPerDeserterFactor = 2f;
     public const int NormalRoomBombs = 2;
     public const int NormalAllies = 1;
     public const int NormalBrutusOpinionDays = 60;
+    public const int NormalCellGrenades = 1;
+    public const int NormalPlotGrenades = 1;
 
     public Pawn stellarch;
     public AscensionDifficulty difficulty;
@@ -67,8 +72,9 @@ public class QuestPart_AscensionDifficulty : QuestPartActivable
         Complete();
     }
 
-    //The difficulty of the ascension under way for her; one begun before the choice existed is Losing is fun, as built
-    public static AscensionDifficulty For(Pawn stellarch)
+    //The difficulty of the ascension under way for her; one never asked is unasked, Losing is fun unless the caller says
+    //otherwise, as built for an ascension begun before the choice existed
+    public static AscensionDifficulty For(Pawn stellarch, AscensionDifficulty unasked = AscensionDifficulty.LosingIsFun)
     {
         foreach (var quest in Find.QuestManager.QuestsListForReading)
         {
@@ -78,7 +84,7 @@ public class QuestPart_AscensionDifficulty : QuestPartActivable
                     return choice.difficulty;
         }
 
-        return AscensionDifficulty.LosingIsFun;
+        return unasked;
     }
 
     public static AscensionDifficulty Of(Quest quest)

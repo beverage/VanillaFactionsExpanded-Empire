@@ -140,8 +140,18 @@
 	<VFEE.Conspiracy.TruceBrokenLabel>Truce broken</VFEE.Conspiracy.TruceBrokenLabel>
 	<VFEE.Conspiracy.TruceBroken>{KILLER_nameDef} has killed {VICTIM_nameDef}, and the truce after {STELLARCH}'s death is broken. The other plotters have gone over to the deserters: {CONSPIRATORS}.</VFEE.Conspiracy.TruceBroken>
 	<VFEE.Conspiracy.FightOver>The fighting is over, and the children and slaves who sat it out are coming out of hiding.</VFEE.Conspiracy.FightOver>
+	<VFEE.Counters.CellGrenade>{GRENADIERS} also carries a smuggled EMP grenade, for the machines and shields that guard {STELLARCH_objective}.</VFEE.Counters.CellGrenade>
+	<VFEE.Counters.CellGrenades>{GRENADIERS} also carry smuggled EMP grenades, for the machines and shields that guard {STELLARCH_objective}.</VFEE.Counters.CellGrenades>
+	<VFEE.Counters.CellDampened>Each of them wears a psychic dampener, so {STELLARCH_nameDef}'s psychic powers will not touch them.</VFEE.Counters.CellDampened>
+	<VFEE.Counters.CellDampenedAlone>{DESERTER_nameDef} wears a psychic dampener, so {STELLARCH_nameDef}'s psychic powers will not touch {DESERTER_objective}.</VFEE.Counters.CellDampenedAlone>
+	<VFEE.Counters.CellExecution>They know what {STELLARCH_nameDef} is: if {STELLARCH_pronoun} goes down, they will make sure of {STELLARCH_objective} with a blade.</VFEE.Counters.CellExecution>
+	<VFEE.Counters.CellExecutionAlone>{DESERTER_nameDef} knows what {STELLARCH_nameDef} is: if {STELLARCH_pronoun} goes down, {DESERTER_pronoun} will make sure of {STELLARCH_objective} with a blade.</VFEE.Counters.CellExecutionAlone>
+	<VFEE.Counters.PlotGrenade>The deserters smuggled {GRENADIERS} an EMP grenade for the machines and shields that guard {STELLARCH_objective}.</VFEE.Counters.PlotGrenade>
+	<VFEE.Counters.PlotGrenades>The deserters smuggled {GRENADIERS} an EMP grenade each, for the machines and shields that guard {STELLARCH_objective}.</VFEE.Counters.PlotGrenades>
+	<VFEE.Counters.PlotExecution>If {STELLARCH_nameDef} goes down, the plotters will make sure of {STELLARCH_objective} with a blade.</VFEE.Counters.PlotExecution>
+	<VFEE.Counters.PlotExecutionAlone>If {STELLARCH_nameDef} goes down, {BRUTUS_nameDef} will make sure of {STELLARCH_objective} with a blade.</VFEE.Counters.PlotExecutionAlone>
 	<VFEE.Ascension.DifficultyTitle>How dangerous an ascension?</VFEE.Ascension.DifficultyTitle>
-	<VFEE.Ascension.Difficulty>{STELLARCH_nameDef}'s ascension is about to be announced across the realm. For five days, delegations will come to pay their respects, and then the nobility will land for the parade. Not everyone who comes will wish {STELLARCH_objective} well, and not every danger will come from outside the colony. Keep {STELLARCH_objective} guarded day and night, from now until {STELLARCH_pronoun} boards the shuttle.\n\nHow dangerous should it be? This cannot be changed later.\n\nNormal: fewer of {STELLARCH_possessive} enemies will dare to strike.\n\nLosing is fun: all of them will.</VFEE.Ascension.Difficulty>
+	<VFEE.Ascension.Difficulty>{STELLARCH_nameDef}'s ascension is about to be announced across the realm. For five days, delegations will come to pay their respects, and then the nobility will land for the parade. Not everyone who comes will wish {STELLARCH_objective} well, and not every danger will come from outside the colony. Whoever comes for {STELLARCH_objective} will know what guards {STELLARCH_objective}. Keep {STELLARCH_objective} guarded day and night, from now until {STELLARCH_pronoun} boards the shuttle.\n\nHow dangerous should it be? This cannot be changed later.\n\nNormal: fewer of {STELLARCH_possessive} enemies will dare to strike.\n\nLosing is fun: all of them will.</VFEE.Ascension.Difficulty>
 	<VFEE.Ascension.DifficultyNormal>Normal</VFEE.Ascension.DifficultyNormal>
 	<VFEE.Ascension.DifficultyLosingIsFun>Losing is fun</VFEE.Ascension.DifficultyLosingIsFun>
 	<VFEE.DefuseBomb>Defuse bomb</VFEE.DefuseBomb>

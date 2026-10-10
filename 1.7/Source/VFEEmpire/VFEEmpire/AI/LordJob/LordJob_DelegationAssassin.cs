@@ -79,20 +79,25 @@ public class LordJob_DelegationAssassin : LordJob
         {
             DelegationUtility.RemoveEnvoy(pawn);
             if (deserters != null) pawn.SetFaction(deserters);
-            DelegationUtility.DrawSmuggledWeapon(pawn);
+            DelegationUtility.DrawSmuggledWeapon(pawn, target);
         }
 
         if (deserters != null) lord.faction = deserters;
 
         var assassins = lord.ownedPawns.ToList();
         if (assassins.Count == 0) return;
+        //They come ready for what guards her: grenades for what runs on power near her, and dampeners against her psycasts
+        var grenadiers = AscensionCounters.HandOutGrenades(assassins, target,
+            AscensionCounters.CellGrenades(assassins, target, QuestPart_AscensionDifficulty.For(target)));
+        var dampened = AscensionCounters.Dampen(assassins, target);
         //A lone deserter is named; a cell is listed
         var key = assassins.Count > 1
             ? exposedByDenouncing ? "VFEE.Delegation.CellExposed" : "VFEE.Delegation.Cell"
             : exposedByDenouncing ? "VFEE.Delegation.AssassinExposed" : "VFEE.Delegation.Assassin";
         var names = assassins.Select(pawn => pawn.NameShortColored.Resolve()).ToCommaList(true);
         Find.LetterStack.ReceiveLetter((key + "Label").Translate(assassins[0].Named("PAWN"), assassins.Count.Named("COUNT")),
-            key.Translate(assassins[0].Named("PAWN"), names.Named("NAMES"), delegationFaction.Named("FACTION"), target.Named("STELLARCH")),
+            key.Translate(assassins[0].Named("PAWN"), names.Named("NAMES"), delegationFaction.Named("FACTION"), target.Named("STELLARCH"))
+          + AscensionCounters.CellReadyText(assassins, grenadiers, dampened, target),
             LetterDefOf.ThreatBig, new List<Pawn>(assassins) { target }, deserters);
         //Out of fast forward, as a raid's arrival does
         Find.TickManager.slower.SignalForceNormalSpeedShort();

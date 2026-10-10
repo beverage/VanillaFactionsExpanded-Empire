@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!-- Given to a deserter cell sent against a stellarch with a psylink: psychically deaf, so her psycasts and psychic lances cannot touch them -->
+  <HediffDef>
+    <defName>VFEE_PsychicDampener</defName>
+    <label>psychic dampener</label>
+    <description>A device the deserters wear against psycasters. It leaves its wearer psychically deaf.</description>
+    <hediffClass>HediffWithComps</hediffClass>
+    <isBad>false</isBad>
+    <stages>
+      <li>
+        <statFactors>
+          <PsychicSensitivity>0</PsychicSensitivity>
+        </statFactors>
+      </li>
+    </stages>
+  </HediffDef>
+
+</Defs>

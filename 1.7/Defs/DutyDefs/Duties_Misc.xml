@@ -48,6 +48,8 @@
                 </li>
             </subNodes>
         </thinkNode>
+        <!-- A smuggled EMP grenade goes the moment a blast would catch what guards her, whatever the deserter is doing -->
+        <constantThinkNode Class="VFEEmpire.JobGiver_AssassinThrow" />
     </DutyDef>
     <DutyDef>
         <defName>VFEE_KillRoyalty</defName>

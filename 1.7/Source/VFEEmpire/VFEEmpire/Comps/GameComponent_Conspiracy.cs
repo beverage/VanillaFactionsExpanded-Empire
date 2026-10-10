@@ -119,15 +119,14 @@ public class GameComponent_Conspiracy : GameComponent
     public bool TryBeginPlot(LordJob_Parade parade)
     {
         var stellarch = parade.stellarch;
-        if (plot != null || stellarch == null || stellarch.Dead || !Find.Storyteller.difficulty.allowViolentQuests
-         || betrayedStellarchs.Contains(stellarch.GetUniqueLoadID())) return false;
+        if (plot != null || !MayPlotAgainst(stellarch)) return false;
         //The Brutus may love her, so there is a plot whenever anyone outside her honor guard is fit to strike; the allies are
         //only ever candidates, who do not
-        var eligible = parade.Map.mapPawns.FreeColonistsSpawned.Where(pawn => CanConspire(pawn, parade)).ToList();
+        var eligible = Eligible(parade);
         if (eligible.Count == 0) return false;
-        var candidates = eligible.Where(pawn => pawn.relations.OpinionOf(stellarch) < TruceOpinionThreshold).ToList();
+        var candidates = eligible.Where(pawn => IsCandidate(pawn, stellarch)).ToList();
 
-        var nobles = eligible.Where(pawn => pawn.royalty?.MostSeniorTitle != null).ToList();
+        var nobles = eligible.Where(IsNoble).ToList();
         var rival = nobles.OrderByDescending(pawn => pawn.royalty.MostSeniorTitle.def.seniority)
            .ThenByDescending(pawn => pawn.HasHonors() ? pawn.Honors().Honors.Count() : 0)
            .FirstOrDefault();
@@ -137,11 +136,9 @@ public class GameComponent_Conspiracy : GameComponent
 
         //As many allies as she has guards, one at most on the Normal difficulty: those who dislike her most, then those who
         //like the Brutus most, then the rest, coolest towards her first
-        var guards = parade.guards.Where(guard => guard.Spawned && !guard.Dead && !guard.Downed).ToList();
-        var difficulty = QuestPart_AscensionDifficulty.For(stellarch);
-        var count = difficulty == AscensionDifficulty.Normal
-            ? System.Math.Min(guards.Count, QuestPart_AscensionDifficulty.NormalAllies)
-            : guards.Count;
+        var guards = StandingGuards(parade);
+        var difficulty = DifficultyFor(stellarch);
+        var count = AlliesWanted(guards.Count, difficulty);
         var others = candidates.Where(pawn => pawn != brutus)
            .Select(pawn => (pawn, ofHer: pawn.relations.OpinionOf(stellarch), ofBrutus: pawn.relations.OpinionOf(brutus))).ToList();
         var allies = others.Where(other => other.ofHer < 0).OrderBy(other => other.ofHer)
@@ -174,6 +171,47 @@ public class GameComponent_Conspiracy : GameComponent
 
         return true;
     }
+
+    //How many colonists a plot begun now would take from her defence, the Brutus and its allies, for the parade's deserter
+    //raid, which is sized by the defenders the plot leaves (QuestPart_DeserterRaid). The Brutus is drawn at random, and one
+    //who loves her leaves every candidate free to be an ally, so where the draw allows it this counts that larger plot. A
+    //plot already under way counts those still in it
+    public int PlottersFor(LordJob_Parade parade)
+    {
+        var stellarch = parade.stellarch;
+        if (plot != null) return plot.stellarch == stellarch ? plot.Conspirators.Count(InPlot) : 0;
+        if (!MayPlotAgainst(stellarch)) return 0;
+        var eligible = Eligible(parade);
+        if (eligible.Count == 0) return 0;
+        var candidates = eligible.Count(pawn => IsCandidate(pawn, stellarch));
+        var nobles = eligible.Where(IsNoble).ToList();
+        var brutusMayLoveHer = (nobles.Count > 0 ? nobles : eligible).Any(pawn => !IsCandidate(pawn, stellarch));
+        var alliesWanted = AlliesWanted(StandingGuards(parade).Count, DifficultyFor(stellarch));
+        return 1 + System.Math.Min(alliesWanted, brutusMayLoveHer ? candidates : candidates - 1);
+    }
+
+    //Under any storyteller: the deserter raid that covers the plot comes with violent quests off too
+    private bool MayPlotAgainst(Pawn stellarch) =>
+        stellarch != null && !stellarch.Dead && !betrayedStellarchs.Contains(stellarch.GetUniqueLoadID());
+
+    //The difficulty chosen for her ascension. One under a storyteller that allows no violent quests is never asked, and its
+    //plot takes Normal's rules, the gentler ones
+    private static AscensionDifficulty DifficultyFor(Pawn stellarch) => QuestPart_AscensionDifficulty.For(stellarch,
+        Find.Storyteller.difficulty.allowViolentQuests ? AscensionDifficulty.LosingIsFun : AscensionDifficulty.Normal);
+
+    private static List<Pawn> Eligible(LordJob_Parade parade) =>
+        parade.Map.mapPawns.FreeColonistsSpawned.Where(pawn => CanConspire(pawn, parade)).ToList();
+
+    private static bool IsCandidate(Pawn pawn, Pawn stellarch) => pawn.relations.OpinionOf(stellarch) < TruceOpinionThreshold;
+
+    private static bool IsNoble(Pawn pawn) => pawn.royalty?.MostSeniorTitle != null;
+
+    private static List<Pawn> StandingGuards(LordJob_Parade parade) =>
+        parade.guards.Where(guard => guard.Spawned && !guard.Dead && !guard.Downed).ToList();
+
+    //As many allies as she has guards, one at most on the Normal difficulty
+    private static int AlliesWanted(int guards, AscensionDifficulty difficulty) =>
+        difficulty == AscensionDifficulty.Normal ? System.Math.Min(guards, QuestPart_AscensionDifficulty.NormalAllies) : guards;
 
     private static bool CanConspire(Pawn pawn, LordJob_Parade parade) =>
         pawn != parade.stellarch && !parade.guards.Contains(pawn) && pawn.IsFreeNonSlaveColonist && !pawn.IsQuestLodger() && !pawn.IsMutant
@@ -338,6 +376,11 @@ public class GameComponent_Conspiracy : GameComponent
             text += " " + key.Translate(plot.brutus.Named("BRUTUS"), plot.stellarch.Named("STELLARCH"));
         }
 
+        //What the deserters gave the plot for what guards her: grenades for what runs on power near her, handed out now so the
+        //approach shows nothing, and a blade for a Deathless stellarch (AscensionCounters)
+        plot.grenadiers = AscensionCounters.HandOutGrenades(strikers, plot.stellarch, AscensionCounters.PlotGrenades(strikers, plot.stellarch, plot.difficulty));
+        text += AscensionCounters.PlotReadyText(strikers, plot.grenadiers, plot.brutus, plot.stellarch);
+
         text += "\n\n" + (alone ? "VFEE.Conspiracy.StrikeRulesAlone" : "VFEE.Conspiracy.StrikeRules").Translate(plot.brutus.Named("BRUTUS"),
             plot.stellarch.Named("STELLARCH"));
         Find.LetterStack.ReceiveLetter("VFEE.Conspiracy.StrikeLabel".Translate(plot.brutus.Named("BRUTUS")), text, LetterDefOf.ThreatBig,
@@ -385,6 +428,7 @@ public class GameComponent_Conspiracy : GameComponent
             if (pawn.Dead) continue;
             EndPlotState(pawn);
             RemoveTrait(pawn, VFEE_DefOf.VFEE_Conspirator);
+            AscensionCounters.TakeBackGrenade(pawn);
             MakeGuiltyForGood(pawn);
             if ((pawn == failed.brutus && !outOfReach) || pawn.Downed || !pawn.Spawned) continue;
             if (pawn.equipment?.Primary != null) pawn.equipment.TryDropEquipment(pawn.equipment.Primary, out _, pawn.Position);
@@ -491,6 +535,7 @@ public class GameComponent_Conspiracy : GameComponent
         {
             EndPlotState(pawn);
             RemoveTrait(pawn, VFEE_DefOf.VFEE_Conspirator);
+            AscensionCounters.TakeBackGrenade(pawn);
             MakeGuiltyForGood(pawn);
         }
 
@@ -744,6 +789,8 @@ public class Conspiracy : IExposable
     public Pawn brutus;
     public List<Pawn> allies = new();
     public List<Pawn> guards = new();
+    //The plotters the deserters gave an EMP grenade as the plot struck (AscensionCounters.HandOutGrenades)
+    public List<Pawn> grenadiers = new();
     public Map map;
     public Pawn fallbackHeir;
     public int startTick;
@@ -797,6 +844,7 @@ public class Conspiracy : IExposable
         Scribe_References.Look(ref brutus, "brutus", true);
         Scribe_Collections.Look(ref allies, "allies", true, LookMode.Reference);
         Scribe_Collections.Look(ref guards, "guards", true, LookMode.Reference);
+        Scribe_Collections.Look(ref grenadiers, "grenadiers", LookMode.Reference);
         Scribe_References.Look(ref map, "map");
         Scribe_References.Look(ref fallbackHeir, "fallbackHeir");
         Scribe_Values.Look(ref startTick, "startTick");
@@ -812,11 +860,13 @@ public class Conspiracy : IExposable
         if (Scribe.mode != LoadSaveMode.PostLoadInit) return;
         allies ??= new();
         guards ??= new();
+        grenadiers ??= new();
         opinionsOfHer ??= new();
         fights ??= new();
         marks ??= new();
         allies.RemoveAll(pawn => pawn == null);
         guards.RemoveAll(pawn => pawn == null);
+        grenadiers.RemoveAll(pawn => pawn == null);
         opinionsOfHer.RemoveAll(pair => pair.Key == null);
         fights.RemoveAll(pair => pair.Key == null);
         marks.RemoveAll(pair => pair.Key == null || pair.Value == null);

@@ -30,4 +30,11 @@
         <driverClass>VFEEmpire.JobDriver_ConspiratorCloseIn</driverClass>
         <reportString>following TargetA.</reportString>
     </JobDef>
+    <!-- An attacker making sure of a downed stellarch the Deathless gene keeps alive, with vanilla's execution cut -->
+    <JobDef>
+        <defName>VFEE_ExecuteStellarch</defName>
+        <driverClass>VFEEmpire.JobDriver_ExecuteStellarch</driverClass>
+        <reportString>executing TargetA.</reportString>
+        <casualInterruptible>false</casualInterruptible>
+    </JobDef>
 </Defs>
