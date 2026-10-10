@@ -17,8 +17,9 @@ public enum AscensionDifficulty
 //waits for an answer, and comes back after a load until it has one
 public class QuestPart_AscensionDifficulty : QuestPartActivable
 {
-    //What Normal changes: QuestPart_Delegations.TrySend, LordJob_Parade.SpawnBomb, GameComponent_Conspiracy.TryBeginPlot,
-    //GameComponent_Conspiracy.StrikeTargetFor and GameComponent_Conspiracy.Truce
+    //What Normal changes: QuestPart_Delegations.TrySend, LordJob_Parade.SpawnBomb, GameComponent_Conspiracy.AlliesWanted,
+    //GameComponent_Conspiracy.StrikeTargetFor and GameComponent_Conspiracy.Truce. The parade's deserter raid is the same on
+    //both (QuestPart_DeserterRaid)
     public const float NormalPointsPerDeserterFactor = 2f;
     public const int NormalRoomBombs = 2;
     public const int NormalAllies = 1;
@@ -67,8 +68,9 @@ public class QuestPart_AscensionDifficulty : QuestPartActivable
         Complete();
     }
 
-    //The difficulty of the stellarch's ascension under way; one begun before the choice existed is Losing is fun, as built
-    public static AscensionDifficulty For(Pawn stellarch)
+    //The difficulty of the stellarch's ascension under way; one never asked is unasked, Losing is fun unless the caller says
+    //otherwise, as built for an ascension begun before the choice existed
+    public static AscensionDifficulty For(Pawn stellarch, AscensionDifficulty unasked = AscensionDifficulty.LosingIsFun)
     {
         foreach (var quest in Find.QuestManager.QuestsListForReading)
         {
@@ -78,7 +80,7 @@ public class QuestPart_AscensionDifficulty : QuestPartActivable
                     return choice.difficulty;
         }
 
-        return AscensionDifficulty.LosingIsFun;
+        return unasked;
     }
 
     public static AscensionDifficulty Of(Quest quest)

@@ -30,7 +30,6 @@ public class QuestNode_Root_RoyalParade : QuestNode
 
         //Getting Initial requirement
         var map = StellarchMap();
-        var points = slate.Get<float>("points");
 
         var empire = Find.FactionManager.OfEmpire;
         var stellarch = map.mapPawns.FreeColonistsSpawned
@@ -115,8 +114,9 @@ public class QuestNode_Root_RoyalParade : QuestNode
         //Meanwhile the realm pays its respects: a delegation a day from the friendly factions, with deserters hidden among them
         //unless the storyteller allows no violent quests. The letter opening the countdown warns of them.
         var assassinsCome = Find.Storyteller.difficulty.allowViolentQuests;
-        //How dangerous it is to be, asked as the countdown begins, unless the storyteller allows no violent quests, which
-        //leaves the choice nothing to change
+        //How dangerous it is to be, asked as the countdown begins, unless the storyteller allows no violent quests: such an
+        //ascension hides no deserters among the delegations, and the Brutus's plot takes Normal's rules
+        //(GameComponent_Conspiracy.DifficultyFor)
         if (assassinsCome)
             quest.AddPart(new QuestPart_AscensionDifficulty
             {
@@ -185,48 +185,17 @@ public class QuestNode_Root_RoyalParade : QuestNode
         quest.AddPart(endGame);
         //After the credits part, whose countdown holds off the game over check if everyone ascended
         quest.AddPart(new QuestPart_Ascension { inSignal = pickupSuccess, stellarch = stellarch });
-        //raid
-        quest.Signal(raidSignal, () =>
+        //raid: made as it comes, by the colony's defenders then (QuestPart_DeserterRaid), and the letter points at whoever came
+        var raidArrived = QuestGen.GenerateNewSignal("RaidArrived");
+        quest.AddPart(new QuestPart_DeserterRaid
         {
-            static bool HostileToPlayerAndEmpire(Faction f) => f.HostileTo(Faction.OfPlayer) && f.HostileTo(Faction.OfEmpire);
-            var deserters = GameComponent_Empire.Instance.Deserter;
-            var raidFaction = deserters
-                ?? Find.FactionManager.GetFactions(allowNonHumanlike: false, minTechLevel: TechLevel.Industrial).Where(HostileToPlayerAndEmpire).RandomElementWithFallback()
-                ?? Find.FactionManager.GetFactions(allowNonHumanlike: false).Where(HostileToPlayerAndEmpire).RandomElementWithFallback();
-            if (raidFaction != null)
-            {
-                RCellFinder.TryFindRandomPawnEntryCell(out var arriveCell, map, CellFinder.EdgeRoadChance_Hostile);
-                var raiders = PawnGroupMakerUtility.GeneratePawns(new PawnGroupMakerParms
-                    {
-                        faction = raidFaction,
-                        groupKind = PawnGroupKindDefOf.Combat,
-                        points = points > 150 ? points : 150,
-                        tile = map.Tile
-                    })
-                   .ToList();
-                foreach (var raider in raiders)
-                {
-                    Find.WorldPawns.PassToWorld(raider);
-                    QuestGen.AddToGeneratedPawns(raider);
-                }
-
-                var raidArrives = new QuestPart_PawnsArrive
-                {
-                    pawns = raiders,
-                    arrivalMode = PawnsArrivalModeDefOf.EdgeWalkIn,
-                    joinPlayer = false,
-                    mapParent = map.Parent,
-                    spawnNear = arriveCell,
-                    inSignal = QuestGen.slate.Get<string>("inSignal"),
-                    sendStandardLetter = false
-                };
-                //Targets are nobles, shuttle, and ballrooms
-                quest.AddPart(raidArrives);
-                quest.AssaultThings(map.Parent, raiders, raidFaction, Gen.YieldSingle(stellarch));
-                quest.Letter(LetterDefOf.ThreatBig, relatedFaction: deserters, lookTargets: raiders, label: "[raidArrivedLetterLabel]",
-                    text: "[raidArrivedLetterText]");
-            }
+            inSignal = raidSignal,
+            outSignalArrived = raidArrived,
+            mapParent = map.Parent,
+            stellarch = stellarch
         });
+        quest.Letter(LetterDefOf.ThreatBig, raidArrived, relatedFaction: GameComponent_Empire.Instance.Deserter, label: "[raidArrivedLetterLabel]",
+            text: "[raidArrivedLetterText]");
         //All exit fail conditions
         var lodgerArrestedSignal = QuestGenUtility.HardcodedSignalWithQuestID("Parade.Arrested");
         var lodgerDestroyedSignal = QuestGenUtility.HardcodedSignalWithQuestID("Parade.Destroyed");

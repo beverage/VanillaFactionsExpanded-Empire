@@ -44,6 +44,7 @@
 	<VFEE.Parade.Description>A traditional ascension parade to send off the stellarch!</VFEE.Parade.Description>
 	<VFEE.Parade.InvalidGuard>The stellarch does not trust {0} enough.</VFEE.Parade.InvalidGuard>
 	<VFEE.Parade.ChooseParticipants>Participants</VFEE.Parade.ChooseParticipants>
+	<VFEE.Parade.DefendersAway>The deserters who attack the parade will come in numbers to match everyone the colony has who can fight, home or away. Away now: {NAMES}.</VFEE.Parade.DefendersAway>
 	<VFEE.Parade.LandingAreaUnmet>a landing pad for the guests' shuttle, marked out by four powered ship landing beacons</VFEE.Parade.LandingAreaUnmet>
 	<VFEE.Parade.Reward.Label>Stellarch Ascension</VFEE.Parade.Reward.Label>
 	<VFEE.Parade.Reward.Description>Your stellarch will achieve ascension with passage off-world to progress further in the grand hierarchy, serving directly with the Emperor</VFEE.Parade.Reward.Description>
