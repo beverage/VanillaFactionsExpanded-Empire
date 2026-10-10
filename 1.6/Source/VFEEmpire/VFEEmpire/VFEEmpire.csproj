@@ -111,7 +111,9 @@
     <Compile Include="Comps\GameComponent_WealthIncreaseTracker.cs" />
     <Compile Include="Comps\HediffComp_MakeThoughtsStackable.cs" />
     <Compile Include="Comps\HediffComp_RemoveOnAdd.cs" />
+    <Compile Include="Comps\Hediff_CourtStimulant.cs" />
     <Compile Include="Comps\MapComponent_Terrorism.cs" />
+    <Compile Include="Comps\StorytellerComp_RefiringUntilSuccess.cs" />
     <Compile Include="Comps\StorytellerComp_WealthSteps.cs" />
     <Compile Include="DefOf\HonorDefOf.cs" />
     <Compile Include="HarmonyPatches\ColonistTitleCache.cs" />
@@ -151,6 +153,8 @@
     <Compile Include="QuestNode\Questnode_Root_RoyalParade.cs" />
     <Compile Include="QuestNode\QuestPart\QuestPart_RequirementsToShuttleLandingArea.cs" />
     <Compile Include="QuestNode\QuestPart\QuestPart_StellarchFails.cs" />
+    <Compile Include="QuestNode\QuestPart\QuestPart_AwaitParadeLanding.cs" />
+    <Compile Include="QuestNode\QuestPart\QuestPart_Ascension.cs" />
     <Compile Include="QuestNode\QuestPart\QuestPart_Parade.cs" />
     <Compile Include="QuestNode\QuestPart\QuestPart_ArtExhibit.cs" />
     <Compile Include="QuestNode\QuestPart\QuestPart_GrandBall.cs" />
@@ -176,6 +180,7 @@
     <Compile Include="Rituals\LordJob\LordToil\LordToil_GrandBall_Dance.cs" />
     <Compile Include="Rituals\LordJob\LordToil\LordToil_ArtExhibit_Wait.cs" />
     <Compile Include="Rituals\LordJob\LordToil\LordToil_GrandBall_Wait.cs" />
+    <Compile Include="Rituals\LordJob\Trigger_ParadeLostViolently.cs" />
     <Compile Include="Rituals\Outcomes\RitualOutcomeEffectWorker_Parade.cs" />
     <Compile Include="Rituals\Outcomes\RitualOutcomeEffectWorker_ArtExhibit.cs" />
     <Compile Include="Rituals\Outcomes\RitualOutcomeEffectWorker_BestowHonor.cs" />

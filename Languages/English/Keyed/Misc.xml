@@ -50,6 +50,14 @@
 	<VFEE.Parade.Reward.Description>Your stellarch will achieve ascension with passage off-world to progress further in the grand hierarchy, serving directly with the Emperor</VFEE.Parade.Reward.Description>
 	<VFEE.Parade.EndGame.Intro>{STELLARCH_nameDef} has ascended!</VFEE.Parade.EndGame.Intro>
 	<VFEE.Parade.EndGame.Ending>The Imperial shuttle has carried {STELLARCH_nameDef} and everyone who ascended with {STELLARCH_objective} off this rimworld. From now on, {STELLARCH_pronoun} serves at the right hand of Emperor {EMPEROR_nameFull}.\n\nThe colony remains, and its story goes on.</VFEE.Parade.EndGame.Ending>
+	<VFEE.Parade.NoblesArriveIn>Nobles arrive in {0}</VFEE.Parade.NoblesArriveIn>
+	<VFEE.Parade.NoblesArriveOn>The nobles land on {0}.</VFEE.Parade.NoblesArriveOn>
+	<VFEE.Parade.NoblesArriveInDesc>The shuttle carrying the nobility for the ascension parade lands in {0}. Until then, the colony has time to prepare. The nobles will not land while the stellarch is away or the colony is under threat, and if that lasts a day, the parade is called off.</VFEE.Parade.NoblesArriveInDesc>
+	<VFEE.Parade.NoblesWaiting>Parade nobles waiting</VFEE.Parade.NoblesWaiting>
+	<VFEE.Parade.NoblesWaitingAwayDesc>The nobles for the ascension parade will not land until {STELLARCH_nameDef} is at the colony to receive them. If {STELLARCH_pronoun} is not back within {TIME}, the parade is called off.</VFEE.Parade.NoblesWaitingAwayDesc>
+	<VFEE.Parade.NoblesWaitingThreatDesc>The nobles for the ascension parade will not land while the colony is under threat. If the danger has not passed within {TIME}, the parade is called off.</VFEE.Parade.NoblesWaitingThreatDesc>
+	<VFEE.Parade.CalledOffIn>Called off in {0}</VFEE.Parade.CalledOffIn>
+	<VFEE.Parade.CalledOffOn>Unless the nobles can land first, the parade is called off on {0}.</VFEE.Parade.CalledOffOn>
 	<VFEE.DefuseBomb>Defuse bomb</VFEE.DefuseBomb>
 	<VFEE.AssassinationSuccess>Deserters are leaving as they have eliminated their target.</VFEE.AssassinationSuccess>
 	<VFEE.Discard>Discard</VFEE.Discard>

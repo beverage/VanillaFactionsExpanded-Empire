@@ -55,6 +55,9 @@ public class LordJob_ArtExhibit : LordJob_Ritual
     private readonly Dictionary<Thing, Pawn> cachePresenters = new();
     private readonly Dictionary<Pawn, int> totalPresenceTmp = new();
 
+    //Not saved: the nobles' court stimulant has been checked since the game loaded (Notify_PawnAdded gives it after that)
+    private bool keptAwake;
+
     public LordJob_ArtExhibit() { }
 
     public LordJob_ArtExhibit(Pawn leadNoble, Pawn host, LocalTargetInfo targetinfo, Thing shuttle, string questEnded, Room gallery, List<Thing> artPieces)
@@ -301,14 +304,29 @@ public class LordJob_ArtExhibit : LordJob_Ritual
         outcome.ResetCompDatas();
         lord.ReceiveMemo(MemoCeremonyFinished);
         QuestUtility.SendQuestTargetSignals(lord.questTags, signal, lord.Named("SUBJECT"));
-        foreach (var pawn in lord.ownedPawns)
+        foreach (var pawn in lord.ownedPawns.ListFullCopy())
             pawn.jobs.CheckForJobOverride();
-        foreach (var pawn in colonistParticipants)
+        foreach (var pawn in colonistParticipants.ListFullCopy())
             pawn.jobs.CheckForJobOverride();
+    }
+
+    //The nobles can be kept waiting a day for the exhibit to start, and it lasts ten hours more, long enough for them to
+    //collapse from exhaustion on the ground before they board. Everyone the quest brings stays awake while at the exhibit
+    public override void Notify_PawnAdded(Pawn p)
+    {
+        base.Notify_PawnAdded(p);
+        Hediff_CourtStimulant.KeepAwake(p);
     }
 
     public override void LordJobTick()
     {
+        //An exhibit loaded from a save made before the court stimulant: its nobles joined without it
+        if (!keptAwake)
+        {
+            foreach (var pawn in lord.ownedPawns.ListFullCopy()) Hediff_CourtStimulant.KeepAwake(pawn);
+            keptAwake = true;
+        }
+
         if (exhibitStarted && !exhibitFinished)
         {
             outcome.Tick(this);
@@ -356,7 +374,7 @@ public class LordJob_ArtExhibit : LordJob_Ritual
             return;
         }
 
-        foreach (var p in lord.ownedPawns)
+        foreach (var p in lord.ownedPawns.ListFullCopy())
             p.jobs.CheckForJobOverride();
     }
 

@@ -4,7 +4,7 @@
 	<Operation Class="PatchOperationAdd">
 		<xpath>/Defs/StorytellerDef[@Name="BaseStoryteller"]/comps</xpath>
 		<value>
-			<li Class="StorytellerCompProperties_RefiringUniqueQuest">
+			<li Class="VFEEmpire.StorytellerCompProperties_RefiringUntilSuccess">
 				<minDaysPassed>0</minDaysPassed>
 				<refireEveryDays>22</refireEveryDays>
 				<incident MayRequire="Ludeon.RimWorld.Royalty">VFEE_GiveQuest_EndGame_Stellarch</incident>

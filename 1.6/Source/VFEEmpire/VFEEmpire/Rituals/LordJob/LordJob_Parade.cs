@@ -25,6 +25,10 @@ public class LordJob_Parade : LordJob_Ritual
     public LordToil exitToil;
     public List<Pawn> guards = new();
 
+    //Everyone given the guard role, never removed. Notify_PawnLost takes a fallen guard out of guards before the trigger
+    //for a violent loss runs, so Trigger_ParadeLostViolently checks this list: a guard's own loss never fails the parade
+    public List<Pawn> assignedGuards = new();
+
 
     //Not Exposed
     public Sustainer music;
@@ -48,6 +52,9 @@ public class LordJob_Parade : LordJob_Ritual
     public List<Room> visitedRooms = new();
     public Pawn visitorLead;
     private int ticksSinceConfetti;
+
+    //Not saved: the nobles' court stimulant has been checked since the game loaded (Notify_PawnAdded gives it after that)
+    private bool keptAwake;
 
     public LordJob_Parade() { }
 
@@ -118,6 +125,31 @@ public class LordJob_Parade : LordJob_Ritual
         Scribe_Collections.Look(ref guards, "guards", LookMode.Reference);
         Scribe_Collections.Look(ref colonistParticipants, "colonistParticipants", LookMode.Reference);
         Scribe_Collections.Look(ref stops, "stops", LookMode.Value);
+        Scribe_Collections.Look(ref assignedGuards, "assignedGuards", LookMode.Reference);
+        if (Scribe.mode == LoadSaveMode.PostLoadInit) assignedGuards ??= guards?.ToList() ?? new();
+    }
+
+    //The spot is fixed when the nobles are sent, from the cell their shuttle is meant to land on, but the shuttle comes down
+    //near that cell rather than on it when something is in the way: a bush or a tree in its footprint is enough for the
+    //skyfaller to set it down a cell over. A cell south covers the spot, which nobody can reach then, and the nobles, given
+    //no job by their duty, walk off the map. Once they are all out, the spot moves to the shuttle's interaction cell where
+    //it really stands, or to where the lead noble was set down when nobody can stand on that cell, which the skyfaller
+    //keeps clear of trees and walls but not of deep water.
+    private void FollowShuttle(LordToil_BestowingCeremony_MoveInPlace moveToPlace)
+    {
+        if (shuttle is not { Spawned: true }) return;
+        var cell = shuttle.InteractionCell;
+        if (!cell.InBounds(Map) || !cell.Standable(Map))
+        {
+            if (visitorLead is not { Spawned: true }) return;
+            cell = visitorLead.Position;
+        }
+        if (cell == Spot) return;
+        var stop = stops.LastIndexOf(Spot);
+        if (stop >= 0) stops[stop] = cell;
+        target = cell;
+        moveToPlace.spot = cell;
+        paradeToil.spot = cell;
     }
 
     public override StateGraph CreateGraph()
@@ -142,6 +174,7 @@ public class LordJob_Parade : LordJob_Ritual
 
         var transition_Spawned = new Transition(wait_ForSpawned, moveToPlace);
         transition_Spawned.AddTrigger(new Trigger_Custom(signal => signal.type == TriggerSignalType.Tick && lord.ownedPawns.All(x => x.Spawned)));
+        transition_Spawned.AddPreAction(new TransitionAction_Custom(() => FollowShuttle(moveToPlace)));
         graph.transitions.Add(transition_Spawned);
 
         var transition_Arrived = new Transition(moveToPlace, wait_StartParade);
@@ -173,7 +206,7 @@ public class LordJob_Parade : LordJob_Ritual
         transition_ParadeInterupted.AddTrigger(
             new Trigger_TickCondition(() => { return shuttle.Destroyed || stellarch.InMentalState || stellarch.Downed; }, 60));
         //transition_ParadeInterupted.AddTrigger(new Trigger_PawnHarmed()); taking out pawn harmed as instant fail as can be triggered super easily
-        transition_ParadeInterupted.AddTrigger(new Trigger_PawnLostViolently());
+        transition_ParadeInterupted.AddTrigger(new Trigger_ParadeLostViolently());
         transition_ParadeInterupted.AddTrigger(new Trigger_Signal(questEndedSignal));
         graph.transitions.Add(transition_ParadeInterupted);
 
@@ -247,10 +280,11 @@ public class LordJob_Parade : LordJob_Ritual
         outcome.Apply(ticksPassed / (float)duration, totalPresenceTmp, this);
         lord.ReceiveMemo("CeremonyFinished");
         QuestUtility.SendQuestTargetSignals(lord.questTags, signal, lord.Named("SUBJECT"));
-        foreach (var pawn in lord.ownedPawns)
+        foreach (var pawn in lord.ownedPawns.ListFullCopy())
             pawn.jobs.CheckForJobOverride();
+        //A guard killed in the parade is still listed here, and a dead pawn has no job tracker
         foreach (var pawn in colonistParticipants)
-            pawn.jobs.CheckForJobOverride();
+            pawn.jobs?.CheckForJobOverride();
     }
 
     public override void PostCleanup()
@@ -259,8 +293,23 @@ public class LordJob_Parade : LordJob_Ritual
         stellarch.Ideo.RemovePrecept(ritual); //clean up the added precept
     }
 
+    //The nobles can be kept waiting a day for the parade to start, and it lasts half a day more, long enough for them to
+    //collapse from exhaustion on the ground before they board. Everyone the quest brings stays awake while in the parade
+    public override void Notify_PawnAdded(Pawn p)
+    {
+        base.Notify_PawnAdded(p);
+        Hediff_CourtStimulant.KeepAwake(p);
+    }
+
     public override void LordJobTick()
     {
+        //A parade loaded from a save made before the court stimulant: its nobles joined without it
+        if (!keptAwake)
+        {
+            foreach (var pawn in lord.ownedPawns.ListFullCopy()) Hediff_CourtStimulant.KeepAwake(pawn);
+            keptAwake = true;
+        }
+
         if (paradeStarted && !paradeFinished)
         {
             outcome.Tick(this);
@@ -281,7 +330,7 @@ public class LordJob_Parade : LordJob_Ritual
                 }
 
                 if (allAtStart)
-                    foreach (var pawn in lord.ownedPawns)
+                    foreach (var pawn in lord.ownedPawns.ListFullCopy())
                         pawn.jobs.CheckForJobOverride();
             }
 
@@ -407,7 +456,7 @@ public class LordJob_Parade : LordJob_Ritual
                 murderer.jobs.CheckForJobOverride();
             }
 
-        foreach (var pawn in guards)
+        foreach (var pawn in guards.ListFullCopy())
             pawn.jobs.CheckForJobOverride();
     }
 
@@ -420,7 +469,7 @@ public class LordJob_Parade : LordJob_Ritual
             return;
         }
 
-        foreach (var p in lord.ownedPawns)
+        foreach (var p in lord.ownedPawns.ListFullCopy())
         {
             p.mindState.duty.focus = Destination;
             p.jobs.CheckForJobOverride();
@@ -433,7 +482,9 @@ public class LordJob_Parade : LordJob_Ritual
         if (nobles.Contains(p) && ticksPassed < duration) nobles.Remove(p);
         if (guards.Contains(p)) guards.Remove(p);
         var compShuttle = shuttle.TryGetComp<CompShuttle>();
-        if (compShuttle.requiredPawns.Contains(p)) compShuttle.requiredPawns.Remove(p);
+        //After the parade the stellarch may leave to be tended, and the shuttle still waits for her
+        if (compShuttle.requiredPawns.Contains(p) && (p != stellarch || condition != PawnLostCondition.LeftVoluntarily))
+            compShuttle.requiredPawns.Remove(p);
         p.jobs?.CheckForJobOverride();
     }
 
@@ -448,7 +499,11 @@ public class LordJob_Parade : LordJob_Ritual
         }
     }
 
-    public override bool ShouldRemovePawn(Pawn p, PawnLostCondition reason) => true;
+    //Vanilla lets a ritual member leave of their own accord when a need or a wound pulls them away. The parade
+    //has nobody to lead it without the stellarch, so she cannot leave it that way while it lasts. Once it is over
+    //she can, to be tended before she boards.
+    public override bool ShouldRemovePawn(Pawn p, PawnLostCondition reason) =>
+        p != stellarch || reason != PawnLostCondition.LeftVoluntarily || paradeFinished;
 
     public override string GetReport(Pawn pawn) => "LordReportAttending".Translate("VFEE.Parade.Label".Translate());
 

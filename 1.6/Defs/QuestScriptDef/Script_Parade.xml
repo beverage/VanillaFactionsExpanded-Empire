@@ -52,6 +52,15 @@
 				<li>CeremonyFailedLetterText->[asker_nameFull] is disappointed by your failure to make for an enjoyable parade. [asker_pronoun] is leaving with [asker_possessive] guests.</li>
 				<li>CeremonyTimeoutLetterLabel->Parade failed</li>
 				<li>CeremonyTimeoutLetterText->[asker_nameFull] has grown tired of waiting for you to start the parade. [asker_pronoun] is leaving with [asker_possessive] guests.</li>
+				<!--Countdown-->
+				<li>NoblesArriveLetterLabel->Parade nobles arriving</li>
+				<li>NoblesArriveLetterText->[asker_nameFull] and the nobility for [stellarch_nameDef]'s ascension parade are landing. Once they have gathered, select [asker_nameDef] to start the parade. They will not wait long.</li>
+				<li>CountdownHostileLetterLabel->Parade called off</li>
+				<li>CountdownHostileLetterText->The Empire will not send its nobility to a colony it is at war with. [stellarch_nameDef]'s ascension parade is called off.</li>
+				<li>CountdownAwayLetterLabel->Parade called off</li>
+				<li>CountdownAwayLetterText->[asker_nameFull] waited a day for [stellarch_nameDef] to be at the colony to receive the nobility. The ascension parade is called off.</li>
+				<li>CountdownThreatLetterLabel->Parade called off</li>
+				<li>CountdownThreatLetterText->[asker_nameFull] waited a day for the danger at the colony to pass, and will not land the nobility into it. [stellarch_nameDef]'s ascension parade is called off.</li>
 				<!-- Interaction response-->
 				<li>letterIntroArrested->You arrested {SUBJECT_definite}, [oneOfThe].</li>
 				<li>lodgerArrestedLeaveMapLetterLabel->[lodgersLabel] arrested: Departure</li>

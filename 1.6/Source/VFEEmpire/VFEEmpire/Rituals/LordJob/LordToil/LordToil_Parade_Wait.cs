@@ -67,7 +67,8 @@ public class LordToil_Parade_Wait : LordToil_Wait
     public override void UpdateAllDuties()
     {
         var lordJob = (LordJob_Parade)lord.LordJob;
-        foreach (var pawn in lord.ownedPawns)
+        //CheckForJobOverride can take a pawn out of the lord, so this loops over a copy
+        foreach (var pawn in lord.ownedPawns.ListFullCopy())
         {
             if (pawn != bestNoble)
             {
@@ -91,7 +92,10 @@ public class LordToil_Parade_Wait : LordToil_Wait
         foreach (var pawn in pawns)
         {
             if (participants.RoleForPawn(pawn)?.id == "guard")
+            {
                 parade.guards.Add(pawn);
+                parade.assignedGuards.Add(pawn);
+            }
             else
                 parade.nobles.Add(pawn);
             if (pawn.drafter != null) pawn.drafter.Drafted = false;

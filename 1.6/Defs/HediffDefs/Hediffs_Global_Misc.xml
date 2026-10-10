@@ -37,4 +37,19 @@
     </comps>
   </HediffDef>
 
+  <HediffDef>
+    <defName>VFEE_CourtStimulant</defName>
+    <label>court stimulant</label>
+    <description>A stimulant the Imperial nobility take to stay sharp through a long ceremony. Until they leave the ceremony, they need no sleep.</description>
+    <hediffClass>VFEEmpire.Hediff_CourtStimulant</hediffClass>
+    <isBad>false</isBad>
+    <stages>
+      <li>
+        <disablesNeeds>
+          <li>Rest</li>
+        </disablesNeeds>
+      </li>
+    </stages>
+  </HediffDef>
+
 </Defs>
