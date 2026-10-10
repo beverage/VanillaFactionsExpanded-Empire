@@ -377,6 +377,11 @@ public class GameComponent_Conspiracy : GameComponent
             text += " " + key.Translate(plot.brutus.Named("BRUTUS"), plot.stellarch.Named("STELLARCH"));
         }
 
+        //What the deserters gave the plot for what guards the stellarch: grenades for what runs on power nearby, handed out now so
+        //the approach shows nothing, and a blade for a Deathless stellarch (AscensionCounters)
+        plot.grenadiers = AscensionCounters.HandOutGrenades(strikers, plot.stellarch, AscensionCounters.PlotGrenades(strikers, plot.stellarch, plot.difficulty));
+        text += AscensionCounters.PlotReadyText(strikers, plot.grenadiers, plot.brutus, plot.stellarch);
+
         text += "\n\n" + (alone ? "VFEE.Conspiracy.StrikeRulesAlone" : "VFEE.Conspiracy.StrikeRules").Translate(plot.brutus.Named("BRUTUS"),
             plot.stellarch.Named("STELLARCH"));
         Find.LetterStack.ReceiveLetter("VFEE.Conspiracy.StrikeLabel".Translate(plot.brutus.Named("BRUTUS")), text, LetterDefOf.ThreatBig,
@@ -424,6 +429,7 @@ public class GameComponent_Conspiracy : GameComponent
             if (pawn.Dead) continue;
             EndPlotState(pawn);
             RemoveTrait(pawn, VFEE_DefOf.VFEE_Conspirator);
+            AscensionCounters.TakeBackGrenade(pawn);
             MakeGuiltyForGood(pawn);
             if ((pawn == failed.brutus && !outOfReach) || pawn.Downed || !pawn.Spawned) continue;
             if (pawn.equipment?.Primary != null) pawn.equipment.TryDropEquipment(pawn.equipment.Primary, out _, pawn.Position);
@@ -530,6 +536,7 @@ public class GameComponent_Conspiracy : GameComponent
         {
             EndPlotState(pawn);
             RemoveTrait(pawn, VFEE_DefOf.VFEE_Conspirator);
+            AscensionCounters.TakeBackGrenade(pawn);
             MakeGuiltyForGood(pawn);
         }
 
@@ -783,6 +790,8 @@ public class Conspiracy : IExposable
     public Pawn brutus;
     public List<Pawn> allies = new();
     public List<Pawn> guards = new();
+    //The plotters the deserters gave an EMP grenade as the plot struck (AscensionCounters.HandOutGrenades)
+    public List<Pawn> grenadiers = new();
     public Map map;
     public Pawn fallbackHeir;
     public int startTick;
@@ -836,6 +845,7 @@ public class Conspiracy : IExposable
         Scribe_References.Look(ref brutus, "brutus", true);
         Scribe_Collections.Look(ref allies, "allies", true, LookMode.Reference);
         Scribe_Collections.Look(ref guards, "guards", true, LookMode.Reference);
+        Scribe_Collections.Look(ref grenadiers, "grenadiers", LookMode.Reference);
         Scribe_References.Look(ref map, "map");
         Scribe_References.Look(ref fallbackHeir, "fallbackHeir");
         Scribe_Values.Look(ref startTick, "startTick");
@@ -851,11 +861,13 @@ public class Conspiracy : IExposable
         if (Scribe.mode != LoadSaveMode.PostLoadInit) return;
         allies ??= new();
         guards ??= new();
+        grenadiers ??= new();
         opinionsOfStellarch ??= new();
         fights ??= new();
         marks ??= new();
         allies.RemoveAll(pawn => pawn == null);
         guards.RemoveAll(pawn => pawn == null);
+        grenadiers.RemoveAll(pawn => pawn == null);
         opinionsOfStellarch.RemoveAll(pair => pair.Key == null);
         fights.RemoveAll(pair => pair.Key == null);
         marks.RemoveAll(pair => pair.Key == null || pair.Value == null);

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!-- Vanilla's EMP grenade, thrown as an ability so the deserter keeps their weapon, against the stellarch's mechs, turrets and shields -->
+  <AbilityDef>
+    <defName>VFEE_SmuggledEMPGrenade</defName>
+    <label>smuggled EMP grenade</label>
+    <description>An EMP grenade smuggled in for the machines and shields that guard the stellarch. Its blast stuns mechanoids and turrets for a while and breaks personal shields.</description>
+    <iconPath>Things/Item/Equipment/WeaponRanged/EMPGrenades</iconPath>
+    <charges>1</charges>
+    <aiCanUse>false</aiCanUse>
+    <displayGizmoWhileUndrafted>false</displayGizmoWhileUndrafted>
+    <disableGizmoWhileUndrafted>true</disableGizmoWhileUndrafted>
+    <verbProperties>
+      <verbClass>Verb_CastAbility</verbClass>
+      <range>12.9</range>
+      <warmupTime>1.5</warmupTime>
+      <soundCast>ThrowGrenade</soundCast>
+      <targetParams>
+        <canTargetLocations>true</canTargetLocations>
+      </targetParams>
+    </verbProperties>
+    <comps>
+      <li Class="CompProperties_AbilityLaunchProjectile">
+        <projectileDef>Proj_GrenadeEMP</projectileDef>
+      </li>
+    </comps>
+  </AbilityDef>
+
+</Defs>

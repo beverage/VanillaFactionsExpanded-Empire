@@ -1,4 +1,5 @@
-﻿using RimWorld;
+﻿using System.Collections.Generic;
+using RimWorld;
 using Verse;
 using Verse.AI;
 using Verse.AI.Group;
@@ -14,20 +15,26 @@ namespace VFEEmpire;
 //anything else, a vehicle, is struck as the stellarch would be. While the stellarch is standing or lying where downed,
 //only the one leading them goes for the stellarch from the start: each of the others goes first for an armed enemy
 //near the stellarch or near itself, the same way, and for the stellarch once none is left or once it leads them. A
-//stellarch shut in anything is what they all go for
+//stellarch shut in anything is what they all go for. Before any of that, a deserter given a smuggled EMP grenade throws
+//it, the moment a blast would catch what guards the stellarch, going into reach for it here and throwing from wherever
+//it is from the duty's constant node too (JobGiver_AssassinThrow), and a Deathless stellarch down is executed rather
+//than hit (AscensionCounters)
 public class JobGiver_AssassinStrike : ThinkNode_JobGiver
 {
     //A second at a time, so whoever stands by goes for the stellarch the moment the casket or pod is open
     private const int StandByTicks = 60;
 
-    //A guard stands this close to the stellarch or to the one striking
-    private const float GuardRadius = 15f;
+    //A guard stands this close to the stellarch or to the one striking, as the counters count it
+    private const float GuardRadius = AscensionCounters.GuardRadius;
 
     protected override Job TryGiveJob(Pawn pawn)
     {
         if (pawn.mindState.duty?.focus.Thing is not Pawn target || target.Dead) return null;
         var spot = target.SpawnedParentOrMe;
         if (spot == null || spot.Map != pawn.Map) return null;
+        var counter = AscensionCounters.ThrowJob(pawn, target, pawn.GetLord()?.ownedPawns ?? new List<Pawn> { pawn })
+                   ?? AscensionCounters.ExecuteJob(pawn, target);
+        if (counter != null) return counter;
         if (spot == target && GuardToStrike(pawn, target) is { } guard && Strike(pawn, guard, null) is { } atGuard) return atGuard;
         if (spot != target && DelegationUtility.CanForceOpen(spot)) return ForceOpen(pawn, spot);
         return Strike(pawn, spot, target);
