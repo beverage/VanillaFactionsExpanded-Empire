@@ -20,6 +20,10 @@ namespace VFEEmpire
             {
 				return null;
             }
+			if (parade.Halted)
+			{
+				return LordJob_Parade.WaitWhileHalted();
+			}
 			if(parade.shuttle.DestroyedOrNull() || parade.shuttle.OccupiedRect().ExpandedBy(3).Contains(pawn.Position))
 			{
 				return null;
