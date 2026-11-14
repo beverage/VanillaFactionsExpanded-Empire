@@ -35,6 +35,16 @@ public static class Patch_ThoughtStacking
                 yield return instruction;
     }
 
-    public static int GetStackLimit(ThoughtDef def, Pawn pawn) =>
-        pawn.health.hediffSet.GetAllComps().OfType<HediffComp_MakeThoughtsStackable>().Any(comp => comp.MadeStackable(def)) ? 9999 : def.stackLimit;
+    private static HashSet<ThoughtDef> stackableThoughts;
+
+    public static int GetStackLimit(ThoughtDef def, Pawn pawn)
+    {
+        // Only the thoughts a hediff's comp lists can stack past their limit, so only those need the walk over the pawn's hediffs
+        stackableThoughts ??= new HashSet<ThoughtDef>(DefDatabase<HediffDef>.AllDefs
+            .SelectMany(hediff => hediff.comps ?? Enumerable.Empty<HediffCompProperties>())
+            .OfType<HediffCompProperties_MakeThoughtsStackeable>()
+            .SelectMany(props => props.makeStackable ?? Enumerable.Empty<ThoughtDef>()));
+        if (!stackableThoughts.Contains(def)) return def.stackLimit;
+        return pawn.health.hediffSet.GetAllComps().OfType<HediffComp_MakeThoughtsStackable>().Any(comp => comp.MadeStackable(def)) ? 9999 : def.stackLimit;
+    }
 }
