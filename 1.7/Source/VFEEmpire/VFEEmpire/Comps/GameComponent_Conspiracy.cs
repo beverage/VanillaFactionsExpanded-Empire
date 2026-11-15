@@ -121,23 +121,25 @@ public class GameComponent_Conspiracy : GameComponent
         var stellarch = parade.stellarch;
         if (plot != null || !MayPlotAgainst(stellarch)) return false;
         //The Brutus may love the stellarch, so there is a plot whenever anyone outside the honor guard is fit to strike; allies are
-        //only ever candidates, who do not
+        //only ever candidates, who do not. With nobody outside it fit to, one of the guards may turn instead (TurnedGuard)
         var eligible = Eligible(parade);
-        if (eligible.Count == 0) return false;
+        var guards = StandingGuards(parade);
+        var difficulty = DifficultyFor(stellarch);
+        var turned = eligible.Count == 0 ? TurnedGuard(parade, guards, difficulty) : null;
+        if (eligible.Count == 0 && turned == null) return false;
+        if (turned != null) guards.Remove(turned);
         var candidates = eligible.Where(pawn => IsCandidate(pawn, stellarch)).ToList();
 
         var nobles = eligible.Where(IsNoble).ToList();
         var rival = nobles.OrderByDescending(pawn => pawn.royalty.MostSeniorTitle.def.seniority)
            .ThenByDescending(pawn => pawn.HasHonors() ? pawn.Honors().Honors.Count() : 0)
            .FirstOrDefault();
-        var brutus = nobles.Count > 0
+        var brutus = turned ?? (nobles.Count > 0
             ? nobles.RandomElementByWeight(pawn => pawn == rival ? RivalWeight : TitledWeight)
-            : eligible.RandomElementByWeight(pawn => ModsConfig.IdeologyActive && pawn.Ideo?.GetRole(pawn) != null ? RoleWeight : 1f);
+            : eligible.RandomElementByWeight(pawn => ModsConfig.IdeologyActive && pawn.Ideo?.GetRole(pawn) != null ? RoleWeight : 1f));
 
         //As many allies as guards, one at most on the Normal difficulty: those who dislike the stellarch most, then those who
         //like the Brutus most, then the rest, coolest towards the stellarch first
-        var guards = StandingGuards(parade);
-        var difficulty = DifficultyFor(stellarch);
         var count = AlliesWanted(guards.Count, difficulty);
         var others = candidates.Where(pawn => pawn != brutus)
            .Select(pawn => (pawn, ofStellarch: pawn.relations.OpinionOf(stellarch), ofBrutus: pawn.relations.OpinionOf(brutus))).ToList();
@@ -175,14 +177,14 @@ public class GameComponent_Conspiracy : GameComponent
     //How many colonists a plot begun now would take from the defence, the Brutus and its allies, for the parade's deserter
     //raid, which is sized by the defenders the plot leaves (QuestPart_DeserterRaid). The Brutus is drawn at random, and one
     //who loves the stellarch leaves every candidate free to be an ally, so where the draw allows this counts that larger plot. A
-    //plot already under way counts those still in it
+    //guard who would turn counts alone, and a plot already under way counts those still in it
     public int PlottersFor(LordJob_Parade parade)
     {
         var stellarch = parade.stellarch;
         if (plot != null) return plot.stellarch == stellarch ? plot.Conspirators.Count(InPlot) : 0;
         if (!MayPlotAgainst(stellarch)) return 0;
         var eligible = Eligible(parade);
-        if (eligible.Count == 0) return 0;
+        if (eligible.Count == 0) return TurnedGuard(parade, StandingGuards(parade), DifficultyFor(stellarch)) != null ? 1 : 0;
         var candidates = eligible.Count(pawn => IsCandidate(pawn, stellarch));
         var nobles = eligible.Where(IsNoble).ToList();
         var brutusMayLoveStellarch = (nobles.Count > 0 ? nobles : eligible).Any(pawn => !IsCandidate(pawn, stellarch));
@@ -213,10 +215,19 @@ public class GameComponent_Conspiracy : GameComponent
     private static int AlliesWanted(int guards, AscensionDifficulty difficulty) =>
         difficulty == AscensionDifficulty.Normal ? System.Math.Min(guards, QuestPart_AscensionDifficulty.NormalAllies) : guards;
 
+    //With nobody outside the guard fit to strike, on Losing is fun the guard who thinks least of the stellarch turns, alone. A
+    //guard is usually the colony's best fighter, so on Normal there is no plot instead
+    private static Pawn TurnedGuard(LordJob_Parade parade, List<Pawn> guards, AscensionDifficulty difficulty) =>
+        difficulty == AscensionDifficulty.LosingIsFun
+            ? guards.Where(FitToConspire).OrderBy(guard => guard.relations.OpinionOf(parade.stellarch)).FirstOrDefault()
+            : null;
+
     private static bool CanConspire(Pawn pawn, LordJob_Parade parade) =>
-        pawn != parade.stellarch && !parade.guards.Contains(pawn) && pawn.IsFreeNonSlaveColonist && !pawn.IsQuestLodger() && !pawn.IsMutant
-     && pawn.DevelopmentalStage.Adult() && !pawn.Downed && !pawn.InMentalState && !pawn.WorkTagIsDisabled(WorkTags.Violent)
-     && pawn.health.capacities.CapableOf(PawnCapacityDefOf.Moving);
+        pawn != parade.stellarch && !parade.guards.Contains(pawn) && FitToConspire(pawn);
+
+    private static bool FitToConspire(Pawn pawn) =>
+        pawn.IsFreeNonSlaveColonist && !pawn.IsQuestLodger() && !pawn.IsMutant && pawn.DevelopmentalStage.Adult() && !pawn.Downed
+     && !pawn.InMentalState && !pawn.WorkTagIsDisabled(WorkTags.Violent) && pawn.health.capacities.CapableOf(PawnCapacityDefOf.Moving);
 
     //Vanilla's second choice of heir, the colonist the stellarch likes most, taken while the stellarch is alive to like anyone.
     //It is only used when the stellarch's own heir turns out to be a conspirator.
