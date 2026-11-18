@@ -31,7 +31,8 @@ namespace VFEEmpire
             {
                 pawns.Remove(pawn);
 
-                if (pawnsCantDie.Contains(pawn))
+                //A noble the Brutus's plot kills is the plot's victim, not the colony's failure
+                if (pawnsCantDie.Contains(pawn) && GameComponent_Conspiracy.Instance?.KilledByPlot(pawn) != true)
                 {
                     pawnsCantDie.Remove(pawn);
                     if (inSignalDestroyed != outSignalDestroyed_LeaveColony)

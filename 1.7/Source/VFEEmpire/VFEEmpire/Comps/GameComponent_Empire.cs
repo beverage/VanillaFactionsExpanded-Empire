@@ -31,6 +31,8 @@ public class GameComponent_Empire : GameComponent
         if (Find.TickManager.TicksGame > checkTick && Deserter != null)
         {
             checkTick = Find.TickManager.TicksGame + 6000; //0 reason to check it often
+            //Colonists the Brutus's plot sent over to the deserters fight to the last, whatever titles the colony has left
+            if (GameComponent_Conspiracy.Instance?.HoldsDeserters == true) return;
             var hostileEmpire = Faction.OfEmpire.HostileTo(Faction.OfPlayer);
             var hostileDeserter = Deserter.HostileTo(Faction.OfPlayer);
             EmpireUtility.Notify_ColonistsChanged();

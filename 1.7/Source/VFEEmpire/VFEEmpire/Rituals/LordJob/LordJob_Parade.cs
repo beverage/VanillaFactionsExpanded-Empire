@@ -15,7 +15,6 @@ public class LordJob_Parade : LordJob_Ritual
     public static readonly int duration = 30000;
     private static readonly int raidSpawn = 7500;
     private static readonly int bombSpawn = 12500;
-    private static readonly int murders = 22500;
     public static readonly string MemoCeremonyStarted = "CeremonyStarted";
     private static readonly Texture2D icon = ContentFinder<Texture2D>.Get("UI/Rituals/BestowingParade");
     private readonly List<ParadeEffecter> effecters = new();
@@ -28,6 +27,9 @@ public class LordJob_Parade : LordJob_Ritual
     //Everyone given the guard role, never removed. Notify_PawnLost takes a fallen guard out of guards before the trigger
     //for a violent loss runs, so Trigger_ParadeLostViolently checks this list: a guard's own loss never fails the parade
     public List<Pawn> assignedGuards = new();
+
+    //When the Brutus's plot begins, in parade ticks: set when the deserter raid comes, an hour to three after it
+    private int plotTick = -1;
 
 
     //Not Exposed
@@ -161,6 +163,7 @@ public class LordJob_Parade : LordJob_Ritual
         Scribe_Collections.Look(ref stops, "stops", LookMode.Value);
         Scribe_Values.Look(ref haltedTicks, "haltedTicks");
         Scribe_Collections.Look(ref assignedGuards, "assignedGuards", LookMode.Reference);
+        Scribe_Values.Look(ref plotTick, "plotTick", -1);
         if (Scribe.mode == LoadSaveMode.PostLoadInit)
         {
             //A save without the guards' list loads it as null, and the parade reads it unchecked every tick
@@ -179,8 +182,39 @@ public class LordJob_Parade : LordJob_Ritual
     public bool Halted => halted && paradeStarted && !paradeFinished;
 
     //Off the parade's map, or inside something on it, a casket or a shuttle: despawning takes the drafter but leaves the pawn
-    //among the lord's pawns, and nothing else in the parade notices
-    private bool StellarchAway => stellarch.Map != Map;
+    //among the lord's pawns, and nothing else in the parade notices. Carried, downed in the Brutus's plot, the stellarch is not
+    //away, as a stellarch lying where downed is not
+    private bool StellarchAway => stellarch.Map != Map && stellarch.ParentHolder is not Pawn_CarryTracker;
+
+    //The parade's clock and its events, for the ascension console (Dialog_AscensionConsole)
+    public int Elapsed => ticksPassed;
+    public static int RaidTick => raidSpawn;
+    public static int BombTick => bombSpawn;
+    public int PlotTick => plotTick;
+
+    //Dev mode, from the ascension console: the clock jumps to just before the tick given, so its event comes next. Each event
+    //the jump passes over still happens on the way, at its own tick and in order: the raid, then the plot's hour the raid
+    //sets if that falls first, then the bombs. Bombs now before the raid used to skip the raid, and the plot with it
+    public void DebugSkipTo(int tick)
+    {
+        for (var next = NextEventAfter(ticksPassed); next < tick; next = NextEventAfter(ticksPassed))
+        {
+            ticksPassed = next;
+            FireEvents();
+        }
+
+        if (tick - 1 > ticksPassed) ticksPassed = tick - 1;
+    }
+
+    //The first event after the tick given, or int.MaxValue; the plot's hour is -1 until the raid sets it
+    private int NextEventAfter(int tick)
+    {
+        var next = int.MaxValue;
+        if (raidSpawn > tick) next = raidSpawn;
+        if (bombSpawn > tick && bombSpawn < next) next = bombSpawn;
+        if (plotTick > tick && plotTick < next) next = plotTick;
+        return next;
+    }
 
     //Vanilla's periods round anything over an hour to whole hours, so 1.6 hours left would read 2: over an hour this gives
     //tenths, and under one vanilla's own tenths and seconds
@@ -275,8 +309,9 @@ public class LordJob_Parade : LordJob_Ritual
         var transition_ParadeInterupted = new Transition(paradeToil, exitToil);
         transition_ParadeInterupted.AddPreAction(removeColonists);
         transition_ParadeInterupted.AddPreAction(new TransitionAction_Custom(() => { StopParade("CeremonyFailed"); }));
-        transition_ParadeInterupted.AddTrigger(
-            new Trigger_TickCondition(() => { return shuttle.Destroyed || stellarch.InMentalState || stellarch.Downed; }, 60));
+        //While the Brutus's plot is under way, the stellarch going down does not end the parade: the plot plays out first
+        transition_ParadeInterupted.AddTrigger(new Trigger_TickCondition(() => shuttle.Destroyed || stellarch.InMentalState
+         || ((stellarch.Downed || !lord.ownedPawns.Contains(stellarch)) && GameComponent_Conspiracy.Instance?.PlotUnderWayFor(stellarch) != true), 60));
         //transition_ParadeInterupted.AddTrigger(new Trigger_PawnHarmed()); taking out pawn harmed as instant fail as can be triggered super easily
         transition_ParadeInterupted.AddTrigger(new Trigger_ParadeLostViolently());
         transition_ParadeInterupted.AddTrigger(new Trigger_Signal(questEndedSignal));
@@ -429,12 +464,17 @@ public class LordJob_Parade : LordJob_Ritual
                     ticksThisRotation = 0;
                 }
 
-                //Handling all events inside the lordjob rather then mixing back and forth between quest and here. Just easier to put it in one spot.
-                if (ticksPassed == raidSpawn) SpawnRaid();
-                if (ticksPassed == bombSpawn) SpawnBomb();
-                if (ticksPassed == murders) Murderers();
+                FireEvents();
             }
         }
+    }
+
+    //Handling all events inside the lordjob rather then mixing back and forth between quest and here. Just easier to put it in one spot.
+    private void FireEvents()
+    {
+        if (ticksPassed == raidSpawn) SpawnRaid();
+        if (ticksPassed == bombSpawn) SpawnBomb();
+        if (ticksPassed == plotTick) GameComponent_Conspiracy.Instance?.TryBeginPlot(this);
     }
 
     //Says who has just been drafted or that the stellarch has gone, counts each tick the procession waits once, however
@@ -518,65 +558,67 @@ public class LordJob_Parade : LordJob_Ritual
     private void SpawnRaid()
     {
         QuestUtility.SendQuestTargetSignals(lord.questTags, "SpawnRaid", lord.Named("SUBJECT"));
+        //The raid is the Brutus's cover
+        plotTick = ticksPassed + Rand.RangeInclusive(GenDate.TicksPerHour, 3 * GenDate.TicksPerHour);
     }
+
+    //Four bombs in the colony's high-value rooms and one by the shuttle, each a different colour of the deserters' bomb:
+    //double-clicking a thing selects every thing of the same def on screen, so finding one must not show the rest. The four
+    //are drawn from the ten most valuable rooms, so the player knows where to look but not which of them were hit; the
+    //parade's own rooms compete like any other. The Normal difficulty plants two in the rooms
+    private const int RoomBombs = 4;
+    private const int BombableRooms = 10;
 
     private void SpawnBomb()
     {
-        var bombsToPlace = 4;
         var deserter = GameComponent_Empire.Instance.Deserter;
-        for (var i = stage; i < stops.Count; i++)
+        var roomBombs = QuestPart_AscensionDifficulty.For(stellarch) == AscensionDifficulty.Normal ? QuestPart_AscensionDifficulty.NormalRoomBombs : RoomBombs;
+        var kinds = new List<ThingDef>
+                { VFEE_DefOf.VFEE_Bomb, VFEE_DefOf.VFEE_BombRed, VFEE_DefOf.VFEE_BombBlue, VFEE_DefOf.VFEE_BombGreen, VFEE_DefOf.VFEE_BombYellow }
+           .InRandomOrder().ToList();
+        var planted = 0;
+        var ranked = Map.regionGrid.AllRooms.Where(room => room.ProperRoom && !room.PsychologicallyOutdoors && !room.Fogged)
+           .OrderByDescending(RoomValue).ToList();
+        //The rest, most valuable first, only for when one of the ten has no free cell
+        foreach (var room in ranked.Take(BombableRooms).InRandomOrder().Concat(ranked.Skip(BombableRooms)))
         {
-            if (CellFinder.TryFindRandomCellNear(stops[i], Map, 10, c => { return c.GetRoom(Map) == stops[i].GetRoom(Map) && c.GetEdifice(Map) == null; },
-                    out var placeCell))
-            {
-                bombsToPlace--;
-                var bomb = ThingMaker.MakeThing(VFEE_DefOf.VFEE_Bomb) as Building_Bomb;
-                bomb.SetFaction(deserter);
-                bomb.ticksLeft = duration - ticksPassed - 100; //Explode just before parade ends
-                GenSpawn.Spawn(bomb, placeCell, Map);
-            }
-
-            if (bombsToPlace == 0) break;
+            if (planted >= roomBombs) break;
+            if (room.Cells.Where(BombCell).TryRandomElement(out var cell))
+                PlantBomb(kinds[planted++], deserter, cell, duration - ticksPassed - 100); //Explode just before parade ends
         }
 
-        //spawn extra on shuttle
-        if (CellFinder.TryFindRandomCellNear(shuttle.Position, Map, 10, c => { return c.GetEdifice(Map) == null; }, out var shuttleCell))
-        {
-            bombsToPlace--;
-            var bomb = ThingMaker.MakeThing(VFEE_DefOf.VFEE_Bomb) as Building_Bomb;
-            bomb.SetFaction(deserter);
-            bomb.ticksLeft = duration - ticksPassed - 500; //Explode just before parade ends
-            GenSpawn.Spawn(bomb, shuttleCell, Map);
-        }
+        if (CellFinder.TryFindRandomCellNear(shuttle.Position, Map, 10, BombCell, out var shuttleCell))
+            PlantBomb(kinds[planted++], deserter, shuttleCell, duration - ticksPassed - 500);
+
+        //Their beeping used to be the only warning. The letter says how many there are and that some are in the valuable rooms,
+        //and leaves the one by the shuttle to be found. It points at none of them, since pointing would show them all at once
+        if (planted > 0)
+            Find.LetterStack.ReceiveLetter("VFEE.Parade.BombsLabel".Translate(),
+                "VFEE.Parade.Bombs".Translate(planted.Named("COUNT"), (duration - ticksPassed).ToStringTicksToPeriod().Named("TIME")),
+                LetterDefOf.ThreatBig);
     }
 
-    private void Murderers()
+    //Everything in the room: its buildings, its floors and what is stored there, so a vault counts by its gold, a gallery by
+    //its art and a workshop by its benches. Vanilla's room wealth leaves out stored items. People are not property
+    private static float RoomValue(Room room)
     {
-        var murderers = new List<Pawn>();
-        //Rivals first, other nobles, then random colonists
-        foreach (var pawn in Map.mapPawns.FreeColonistsSpawned)
-            if (pawn.relations.OpinionOf(stellarch) < Pawn_RelationsTracker.RivalOpinionThreshold)
-                murderers.Add(pawn);
-        if (murderers.Count < 2)
-            foreach (var pawn in nobles)
-                if (pawn.IsColonist && pawn.relations.OpinionOf(stellarch) < 0)
-                    murderers.Add(pawn);
-        if (murderers.Count < 2)
-            foreach (var pawn in Map.mapPawns.FreeColonistsSpawned)
-                if (pawn.IsColonist && pawn.relations.OpinionOf(stellarch) < 0)
-                    murderers.Add(pawn);
-        var stateDef = DefDatabase<MentalStateDef>.GetNamed("MurderousRage");
-        foreach (var murderer in murderers)
-            if (murderer.mindState.mentalStateHandler.TryStartMentalState(stateDef, "VFEE.Parade.Murder".Translate(murderer.NameFullColored),
-                    transitionSilently: true))
-            {
-                var state = murderer.mindState.mentalStateHandler.CurState as MentalState_MurderousRage;
-                state.target = stellarch;
-                murderer.jobs.CheckForJobOverride();
-            }
+        var value = 0f;
+        foreach (var cell in room.Cells) value += cell.GetTerrain(room.Map).GetStatValueAbstract(StatDefOf.MarketValue);
+        foreach (var thing in room.ContainedAndAdjacentThings)
+            if (thing is not Pawn && thing.def.category is ThingCategory.Building or ThingCategory.Item or ThingCategory.Plant)
+                value += thing.MarketValue * thing.stackCount;
+        return value;
+    }
 
-        foreach (var pawn in guards.ListFullCopy())
-            ReconsiderJob(pawn);
+    //A free cell: nothing built there, and no item for the bomb to land on
+    private bool BombCell(IntVec3 cell) => cell.Standable(Map) && cell.GetEdifice(Map) == null && cell.GetFirstItem(Map) == null && !cell.Fogged(Map);
+
+    private void PlantBomb(ThingDef def, Faction faction, IntVec3 cell, int ticksLeft)
+    {
+        var bomb = (Building_Bomb)ThingMaker.MakeThing(def);
+        bomb.SetFaction(faction);
+        bomb.ticksLeft = ticksLeft;
+        GenSpawn.Spawn(bomb, cell, Map);
     }
 
     public void RoomSwap()
@@ -635,10 +677,12 @@ public class LordJob_Parade : LordJob_Ritual
     //Vanilla lets a ritual member leave of their own accord when a need or a wound pulls them away. The parade
     //has nobody to lead it without the stellarch, so she cannot leave it that way while it lasts. Once it is over
     //the stellarch can, to be tended before boarding. Drafting the stellarch or a guard keeps them in it too, on the allowance
-    //CountHaltedTime keeps.
+    //CountHaltedTime keeps. Downed with the Brutus's plot under way, the stellarch stays in it until the plot is over, and
+    //leads it on if standing again by then.
     public override bool ShouldRemovePawn(Pawn p, PawnLostCondition reason)
     {
         if (p == stellarch && reason == PawnLostCondition.LeftVoluntarily && !paradeFinished) return false;
+        if (p == stellarch && reason == PawnLostCondition.Incapped && GameComponent_Conspiracy.Instance?.PlotUnderWayFor(p) == true) return false;
         return reason != PawnLostCondition.Drafted || !DraftableInParade(p);
     }
 

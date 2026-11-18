@@ -50,7 +50,8 @@ public static class DelegationUtility
     //only, as vanilla arms its champions. Heavy, for a stellarch shut in something they cannot open, it is a heavy gun
     //whatever the budget, for any who can shoot one (HeavyGunTag), and such a shield is thrown down with the rest so the
     //gun fires.
-    public static void DrawSmuggledWeapon(Pawn pawn, bool heavy)
+    //The weighting also leans toward what gets through the armor of the one they came for (AscensionCounters.DamageThrough).
+    public static void DrawSmuggledWeapon(Pawn pawn, Pawn mark, bool heavy)
     {
         var kit = VFEE_DefOf.VFEE_Deserter;
         if (kit?.weaponTags == null || pawn.equipment == null || pawn.inventory == null || !pawn.RaceProps.ToolUser || !pawn.Spawned
@@ -73,7 +74,7 @@ public static class DelegationUtility
                 && Rand.Chance(pair.thing.generateAllowChance)).ToList();
         }
 
-        if (candidates.TryRandomElementByWeight(pair => pair.Commonality * pair.Price, out var pick))
+        if (candidates.TryRandomElementByWeight(pair => pair.Commonality * pair.Price * AscensionCounters.DamageThrough(mark, pair.thing), out var pick))
         {
             var weapon = (ThingWithComps)ThingMaker.MakeThing(pick.thing, pick.stuff);
             PawnGenerator.PostProcessGeneratedGear(weapon, pawn);

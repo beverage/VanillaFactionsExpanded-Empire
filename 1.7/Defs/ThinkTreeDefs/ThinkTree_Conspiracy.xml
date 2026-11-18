@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!-- The conspirators' and the deal's bystanders' mental states, after vanilla's and ahead of drafted orders and lord duties -->
+  <ThinkTreeDef>
+    <defName>VFEE_ConspiracyMentalStates</defName>
+    <insertTag>Humanlike_PostMentalState</insertTag>
+    <insertPriority>100</insertPriority>
+    <thinkRoot Class="ThinkNode_Tagger">
+      <tagToGive>InMentalState</tagToGive>
+      <subNodes>
+        <li Class="ThinkNode_ConditionalMentalState">
+          <state>VFEE_ConspiratorApproach</state>
+          <subNodes>
+            <li Class="VFEEmpire.JobGiver_ConspiratorApproach" />
+            <li Class="JobGiver_Idle">
+              <ticks>60</ticks>
+            </li>
+          </subNodes>
+        </li>
+        <li Class="ThinkNode_ConditionalMentalState">
+          <state>VFEE_ConspiratorStrike</state>
+          <subNodes>
+            <li Class="JobGiver_TakeCombatEnhancingDrug" />
+            <li Class="VFEEmpire.JobGiver_ConspiratorStrike" />
+            <li Class="JobGiver_Idle">
+              <ticks>60</ticks>
+            </li>
+          </subNodes>
+        </li>
+        <li Class="ThinkNode_ConditionalMentalState">
+          <state>VFEE_SittingOutFight</state>
+          <subNodes>
+            <li Class="ThinkNode_PrioritySorter">
+              <subNodes>
+                <li Class="JobGiver_GetFood">
+                  <maxLevelPercentage>0.05</maxLevelPercentage>
+                </li>
+                <li Class="JobGiver_GetRest">
+                  <maxLevelPercentage>0.15</maxLevelPercentage>
+                </li>
+              </subNodes>
+            </li>
+            <li Class="JobGiver_Idle">
+              <ticks>250</ticks>
+            </li>
+          </subNodes>
+        </li>
+      </subNodes>
+    </thinkRoot>
+  </ThinkTreeDef>
+
+</Defs>

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using RimWorld;
 using UnityEngine;
 using Verse;
@@ -24,10 +25,20 @@ public class Command_Parade : Command
 
     public override GizmoResult GizmoOnGUI(Vector2 topLeft, float maxWidth, GizmoRenderParms parms) => base.GizmoOnGUI(topLeft, maxWidth, parms);
 
+    //The begin dialog's lines: its header, and the colony's fighters who are away, whom the deserter raid counts all the
+    //same (QuestPart_DeserterRaid)
+    public static List<string> ExtraInfo(LordJob_Parade job)
+    {
+        var info = new List<string> { "VFEE.Parade.ChooseParticipants".Translate() };
+        var away = QuestPart_DeserterRaid.DefendersAway(job.Map, job.stellarch);
+        if (away.Count > 0)
+            info.Add("VFEE.Parade.DefendersAway".Translate(away.Select(pawn => pawn.LabelShort).ToCommaList(true).Named("NAMES")));
+        return info;
+    }
+
     public override void ProcessInput(Event ev)
     {
         base.ProcessInput(ev);
-        string header = "VFEE.Parade.ChooseParticipants".Translate();
         var label = job.RitualLabel.CapitalizeFirst();
         Dialog_BeginRitual.ActionCallback callBack = participants =>
         {
@@ -46,6 +57,6 @@ public class Command_Parade : Command
         string okButtonText = "Begin".Translate();
         var outcomeDef = InternalDefOf.VFEE_Parade_Outcome;
         Find.WindowStack.Add(new Dialog_BeginRitual(label, job.Ritual, job.target.ToTargetInfo(job.Map), job.Map, callBack, bestNoble, null, filter,
-            okButtonText, outcome: outcomeDef, forcedForRole: forced, extraInfoText: new() { header }));
+            okButtonText, outcome: outcomeDef, forcedForRole: forced, extraInfoText: ExtraInfo(job)));
     }
 }

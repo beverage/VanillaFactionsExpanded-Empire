@@ -41,7 +41,6 @@ public class LordToil_Parade_Wait : LordToil_Wait
             yield return new("VFEE.Parade.Label".Translate().CapitalizeFirst().ToString(), () =>
             {
                 var lordJob = (LordJob_Parade)lord.LordJob;
-                string header = "VFEE.Parade.ChooseParticipants".Translate();
                 var label = lordJob.RitualLabel.CapitalizeFirst();
                 Dialog_BeginRitual.ActionCallback callBack = participants =>
                 {
@@ -60,7 +59,7 @@ public class LordToil_Parade_Wait : LordToil_Wait
                 string okButtonText = "Begin".Translate();
                 var outcomeDef = InternalDefOf.VFEE_Parade_Outcome;
                 Find.WindowStack.Add(new Dialog_BeginRitual(label, lordJob.Ritual, lordJob.target.ToTargetInfo(lordJob.Map), lordJob.Map, callBack, bestNoble,
-                    null, filter, okButtonText, outcome: outcomeDef, forcedForRole: forced, extraInfoText: new() { header }));
+                    null, filter, okButtonText, outcome: outcomeDef, forcedForRole: forced, extraInfoText: Command_Parade.ExtraInfo(lordJob)));
             });
     }
 

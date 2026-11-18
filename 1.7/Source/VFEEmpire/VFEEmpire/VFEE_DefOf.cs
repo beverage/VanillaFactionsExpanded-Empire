@@ -41,6 +41,10 @@ public static class VFEE_DefOf
     public static JobDef VFEE_DefuseBomb;
     public static JobDef VFEE_PlaceBomb;
     public static ThingDef VFEE_Bomb;
+    public static ThingDef VFEE_BombRed;
+    public static ThingDef VFEE_BombBlue;
+    public static ThingDef VFEE_BombGreen;
+    public static ThingDef VFEE_BombYellow;
     public static DutyDef VFEE_MoveTo;
     public static DutyDef VFEE_AttackEnemySpecifc;
     public static ThingDef VFEE_Poison;
@@ -52,6 +56,16 @@ public static class VFEE_DefOf
     public static DutyDef VFEE_AssassinStrike;
     public static HistoryEventDef VFEE_DelegateDenounced;
     public static TraitDef VFEE_Envoy;
+    public static MentalStateDef VFEE_ConspiratorApproach;
+    public static MentalStateDef VFEE_ConspiratorStrike;
+    public static MentalStateDef VFEE_SittingOutFight;
+    public static JobDef VFEE_ConspiratorCloseIn;
+    public static JobDef VFEE_ExecuteStellarch;
+    public static AbilityDef VFEE_SmuggledEMPGrenade;
+    public static HediffDef VFEE_PsychicDampener;
+    public static TraitDef VFEE_Conspirator;
+    public static TraitDef VFEE_Bystander;
+    public static ThoughtDef VFEE_StellarchTruce;
     public static PreceptDef VFEE_BestowHonor;
     public static TerrainDef VFEE_ThickAsh;
     public static TraitDef NaturalMood;
